@@ -2,11 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
-If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/node-persist-manager and sponsoring it.
+If you like this project and find it useful, please consider giving it a star on [GitHub](https://github.com/Luligu/node-persist-manager) and sponsoring it.
 
-<a href="https://www.buymeacoffee.com/luligugithub">
-  <img src="bmc-button.svg" alt="Buy me a coffee" width="120">
-</a>
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="120"></a>
+
+## [2.0.1] - 2026-02-16
+
+### Changed
+
+- [package]: Update dependencies.
+- [package]: Bump to Automator v. 3.0.7.
+- [package]: Add cache under .cache.
+- [workflow]: Migrate to trusted publishing / OIDC.
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
 ## [2.0.0] - 2025-06-22
 
@@ -43,7 +52,7 @@ If you like this project and find it useful, please consider giving it a star on
 - [Security 1]: Description of the security improvement.
 
 <a href="https://www.buymeacoffee.com/luligugithub">
-  <img src="bmc-button.svg" alt="Buy me a coffee" width="80">
+  <img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80">
 </a>
 
 -->

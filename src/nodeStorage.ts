@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /**
  * This file contains the classes NodeStorageManager and NodeStorage
  *
@@ -22,6 +21,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/* eslint-disable no-console */
 
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -332,7 +333,7 @@ export class NodeStorage {
    * @returns {Promise<number>} A promise that resolves with the number of keys in the storage.
    */
   async logStorage(): Promise<number> {
-    console.log(`This NodeStorage has ${await this.storage.length()} keys:`);
+    console.log(`This NodeStorage has ${(await this.storage.length()).toString()} keys:`);
     const keys = await this.storage.keys();
     for (const key of keys) {
       console.log(`- ${key}: ${await this.storage.get(key)}`);
