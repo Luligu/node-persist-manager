@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { jest } from '@jest/globals';
 
-import { NodeStorageManager, NodeStorage } from './nodeStorage.ts';
+import { NodeStorage, NodeStorageManager } from './nodeStorage.js';
 
 // Mock fs/promises module
 const rmSpy = jest.spyOn(fsPromises, 'rm');
@@ -12,14 +12,17 @@ describe('NodeStorageManager with NodeStorage', () => {
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
   let storageManager: NodeStorageManager;
   let storage: NodeStorage;
+  const storageDir = path.join('.cache', 'jest', 'node_storage');
+  const customDir1 = path.join('.cache', 'jest', 'custom_dir_1');
+  const customDir2 = path.join('.cache', 'jest', 'custom_dir_2');
 
   beforeAll(async () => {
     // Spy on and mock console.log
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation((...args: any[]) => {
       // Mock implementation or empty function
     });
-    await fsPromises.rm('node_storage', { recursive: true, force: true });
-    storageManager = new NodeStorageManager();
+    await fsPromises.rm(storageDir, { recursive: true, force: true });
+    storageManager = new NodeStorageManager({ dir: storageDir });
   });
 
   it('should create and initialize storage with default options', async () => {
@@ -29,7 +32,7 @@ describe('NodeStorageManager with NodeStorage', () => {
   it('should not fail with a not existing storages', async () => {
     expect(await storageManager.getStorageNames()).toEqual([]);
     expect(await storageManager.logStorage()).toBe(0);
-    await fsPromises.mkdir(path.join('node_storage', '.testStorage X'), { recursive: true });
+    await fsPromises.mkdir(path.join(storageDir, '.testStorage X'), { recursive: true });
     expect(await storageManager.removeStorage('testStorage X')).toBe(true);
   });
 
@@ -91,8 +94,8 @@ describe('NodeStorageManager with NodeStorage', () => {
   });
 
   it('should not start writeInterval with writeQueue = false', async () => {
-    await fsPromises.rm('custom_dir_1', { recursive: true, force: true });
-    const customOptions = { dir: 'custom_dir_1', writeQueue: false, expiredInterval: undefined };
+    await fsPromises.rm(customDir1, { recursive: true, force: true });
+    const customOptions = { dir: customDir1, writeQueue: false, expiredInterval: undefined };
     storageManager = new NodeStorageManager(customOptions);
     storage = await storageManager.createStorage('testStorage');
     expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();
@@ -110,8 +113,8 @@ describe('NodeStorageManager with NodeStorage', () => {
   });
 
   it('should start writeInterval with writeQueue = true', async () => {
-    await fsPromises.rm('custom_dir_2', { recursive: true, force: true });
-    const customOptions = { dir: 'custom_dir_2', writeQueue: true, expiredInterval: undefined };
+    await fsPromises.rm(customDir2, { recursive: true, force: true });
+    const customOptions = { dir: customDir2, writeQueue: true, expiredInterval: undefined };
     storageManager = new NodeStorageManager(customOptions);
     storage = await storageManager.createStorage('testStorage');
     expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();

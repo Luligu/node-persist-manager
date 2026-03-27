@@ -1,9 +1,9 @@
 import fsPromises from 'node:fs/promises';
+import path from 'node:path';
 
-import NodePersist from 'node-persist';
 import { jest } from '@jest/globals';
 
-import { NodeStorageManager, NodeStorage } from './nodeStorage.ts';
+import { NodeStorage, NodeStorageManager } from './nodeStorage.js';
 
 interface DatumTest {
   key: string;
@@ -14,8 +14,7 @@ interface DatumTest {
 describe('NodeStorageManager with NodeStorage', () => {
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
   let storageManager: NodeStorageManager;
-  const isDevContainer = process.env.REMOTE_CONTAINERS === 'true';
-  const dir = isDevContainer ? 'node_modules/custom_dir_4' : 'custom_dir_4';
+  const dir = path.join('.cache', 'jest', 'custom_dir_4');
 
   beforeAll(async () => {
     // Spy on and mock console.log

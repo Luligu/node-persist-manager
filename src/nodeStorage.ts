@@ -27,8 +27,27 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 
-import NodePersist, { LocalStorage } from 'node-persist';
-import type { InitOptions } from 'node-persist';
+import NodePersist from 'node-persist';
+
+type InitOptions = NodePersist.InitOptions;
+type LocalStorage = NodePersist.LocalStorage;
+type ManagedLocalStorage = LocalStorage & {
+  options: InitOptions;
+  initSync(options?: InitOptions): InitOptions;
+  _writeQueueInterval?: NodeJS.Timeout;
+  _expiredKeysInterval?: NodeJS.Timeout;
+  stopWriteQueueInterval(): void;
+};
+
+/**
+ * Cast a node-persist storage instance to the internal shape used by this package.
+ *
+ * @param {LocalStorage} storage - The node-persist storage instance.
+ * @returns {ManagedLocalStorage} The storage instance with internal timer members.
+ */
+function asManagedLocalStorage(storage: LocalStorage): ManagedLocalStorage {
+  return storage as ManagedLocalStorage;
+}
 
 export type NodeStorageKey = string;
 export type NodeStorageValue = unknown;
@@ -38,7 +57,7 @@ export type NodeStorageName = string;
  * Class responsible for managing multiple node storages.
  */
 export class NodeStorageManager {
-  private readonly storage: LocalStorage;
+  private readonly storage: ManagedLocalStorage;
   private readonly initOptions: InitOptions;
   private storageNames: NodeStorageName[] = [];
 
@@ -60,7 +79,7 @@ export class NodeStorageManager {
     );
 
     // Create and initialize a new instace of LocalStorage
-    this.storage = NodePersist.create(this.initOptions);
+    this.storage = asManagedLocalStorage(NodePersist.create(this.initOptions));
     this.storage.initSync(this.initOptions);
     if (this.storage.options.writeQueue === false) {
       clearInterval(this.storage._writeQueueInterval);
@@ -91,7 +110,7 @@ export class NodeStorageManager {
     const initOptions: InitOptions = {};
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     Object.assign(initOptions, this.initOptions, { dir: path.join(this.initOptions.dir!, '.' + storageName) } as InitOptions);
-    const storage = NodePersist.create(initOptions);
+    const storage = asManagedLocalStorage(NodePersist.create(initOptions));
     await storage.init(initOptions);
     if (storage.options.writeQueue === false) {
       clearInterval(storage._writeQueueInterval);
@@ -166,7 +185,7 @@ export class NodeStorageManager {
  * Class representing a storage for nodes.
  */
 export class NodeStorage {
-  private readonly storage: LocalStorage;
+  private readonly storage: ManagedLocalStorage;
   private readonly initOptions: InitOptions;
 
   /**
@@ -176,7 +195,7 @@ export class NodeStorage {
    * @param {InitOptions} initOptions - The initialization options.
    */
   constructor(storage: LocalStorage, initOptions: InitOptions) {
-    this.storage = storage;
+    this.storage = asManagedLocalStorage(storage);
     this.initOptions = initOptions;
   }
 
@@ -296,24 +315,25 @@ export class NodeStorage {
     return (await this.storage.values()) as unknown as Promise<T[]>;
   }
 
-  static async healthCheck(storage: NodePersist.LocalStorage): Promise<boolean> {
+  static async healthCheck(storage: LocalStorage): Promise<boolean> {
+    const managedStorage = asManagedLocalStorage(storage);
     try {
       // Attempt to get data and keys, and access the first key
-      const data = await storage.data();
+      const data = await managedStorage.data();
       for (const datum of data) {
         if (!datum || !datum.key) {
-          if (storage.options.logging) console.error(`Health check failed for invalid data: ${JSON.stringify(datum)}`);
+          if (managedStorage.options.logging) console.error(`Health check failed for invalid data: ${JSON.stringify(datum)}`);
           return false; // Ensure datum is valid
         }
-        await storage.getItem(datum.key); // Use getItem to ensure we can access the value
+        await managedStorage.getItem(datum.key); // Use getItem to ensure we can access the value
       }
-      const keys = await storage.keys();
+      const keys = await managedStorage.keys();
       if (keys.length !== data.length) return false; // Ensure keys match data length
-      const values = await storage.values();
+      const values = await managedStorage.values();
       if (values.length !== data.length) return false; // Ensure values match data length
       return true; // Storage is healthy
     } catch (error) {
-      if (storage.options.logging) console.error('Health check failed:', error);
+      if (managedStorage.options.logging) console.error('Health check failed:', error);
       return false; // Storage is not healthy
     }
   }

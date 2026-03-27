@@ -1,10 +1,10 @@
-import path from 'node:path';
 import fsPromises from 'node:fs/promises';
+import path from 'node:path';
 
 import { jest } from '@jest/globals';
 import NodePersist, { LocalStorage } from 'node-persist';
 
-import { NodeStorageManager } from './nodeStorage.ts';
+import { NodeStorageManager } from './nodeStorage.js';
 
 // Mock node-persist module
 jest.spyOn(NodePersist, 'create').mockImplementation((options) => {
@@ -22,6 +22,7 @@ jest.spyOn(fsPromises, 'rm').mockResolvedValue(undefined);
 
 describe('NodeStorageManager', () => {
   const defaultDir = process.cwd() + '/node_storage';
+  const customDir = path.join('.cache', 'jest', 'custom_dir');
   let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
 
   beforeAll(() => {
@@ -46,9 +47,9 @@ describe('NodeStorageManager', () => {
   });
 
   it('should merge custom init options with defaults', async () => {
-    const customOptions = { dir: 'custom_dir', logging: true };
+    const customOptions = { dir: customDir, logging: true };
     const expectedOptions = {
-      dir: 'custom_dir',
+      dir: customDir,
       logging: true,
       writeQueue: false,
       expiredInterval: undefined,

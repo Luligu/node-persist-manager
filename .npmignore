@@ -44,10 +44,3 @@ vite.config.*
 *.log
 
 # Package specific directories and files that should be ignored
-
-node_storage
-custom_dir
-custom_dir_1
-custom_dir_2
-custom_dir_3
-custom_dir_4
