@@ -6,7 +6,7 @@ If you like this project and find it useful, please consider giving it a star on
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="120"></a>
 
-## [2.0.2] - 2026-03-27
+## [2.0.2] - 2026-04-10
 
 ### Changed
 
@@ -14,8 +14,9 @@ If you like this project and find it useful, please consider giving it a star on
 - [package]: Update actions versions in workflows.
 - [package]: Bump package to `automator` v.3.1.4.
 - [package]: Bump `typescript` to v.6.0.2.
-- [package]: Bump `typescript-eslint` to v.8.57.2.
-- [package]: Bump `eslint` to v.10.1.0.
+- [package]: Bump `typescript-eslint` to v.8.58.1.
+- [package]: Bump `eslint` to v.10.2.0.
+- [package]: Bump `prettier` to v.3.8.2.
 - [package]: Add `type checking` script for Jest tests.
 - [package]: Add `CODE_OF_CONDUCT.md`.
 - [package]: Add `@eslint/json`.
