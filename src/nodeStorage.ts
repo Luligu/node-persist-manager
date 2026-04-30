@@ -49,6 +49,34 @@ function asManagedLocalStorage(storage: LocalStorage): ManagedLocalStorage {
   return storage as ManagedLocalStorage;
 }
 
+/**
+ * Performs a health check on a managed storage instance.
+ *
+ * @param {ManagedLocalStorage} storage - The managed storage instance to check.
+ * @returns {Promise<boolean>} A promise that resolves with true if the storage is healthy, otherwise false.
+ */
+async function performHealthCheck(storage: ManagedLocalStorage): Promise<boolean> {
+  try {
+    // Attempt to get data and keys, and access the first key
+    const data = await storage.data();
+    for (const datum of data) {
+      if (!datum || typeof datum.key !== 'string') {
+        if (storage.options.logging) console.error(`Health check failed for invalid data: ${JSON.stringify(datum)}`);
+        return false; // Ensure datum is valid
+      }
+      await storage.getItem(datum.key); // Use getItem to ensure we can access the value
+    }
+    const keys = await storage.keys();
+    if (keys.length !== data.length) return false; // Ensure keys match data length
+    const values = await storage.values();
+    if (values.length !== data.length) return false; // Ensure values match data length
+    return true; // Storage is healthy
+  } catch (error) {
+    if (storage.options.logging) console.error('Health check failed:', error);
+    return false; // Storage is not healthy
+  }
+}
+
 export type NodeStorageKey = string;
 export type NodeStorageValue = unknown;
 export type NodeStorageName = string;
@@ -164,6 +192,34 @@ export class NodeStorageManager {
   async getStorageNames(): Promise<NodeStorageName[]> {
     this.storageNames = (await this.storage.get('storageNames')) ?? [];
     return this.storageNames;
+  }
+
+  /**
+   * Retrieves the keys of the entries in the storage.
+   *
+   * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
+   */
+  async keys(): Promise<NodeStorageKey[]> {
+    return await this.storage.keys();
+  }
+
+  /**
+   * Retrieves the values of the entries in the storage.
+   *
+   * @template T - The type of the values to retrieve.
+   * @returns {Promise<T[]>} A promise that resolves with an array of values.
+   */
+  async values<T = unknown>(): Promise<T[]> {
+    return (await this.storage.values()) as unknown as Promise<T[]>;
+  }
+
+  /**
+   *  Performs a health check on the storage by attempting to access its data, keys, and values.
+   *
+   * @returns {Promise<boolean>} A promise that resolves with true if the storage is healthy, otherwise false.
+   */
+  async healthCheck(): Promise<boolean> {
+    return performHealthCheck(this.storage);
   }
 
   /**
@@ -315,27 +371,13 @@ export class NodeStorage {
     return (await this.storage.values()) as unknown as Promise<T[]>;
   }
 
-  static async healthCheck(storage: LocalStorage): Promise<boolean> {
-    const managedStorage = asManagedLocalStorage(storage);
-    try {
-      // Attempt to get data and keys, and access the first key
-      const data = await managedStorage.data();
-      for (const datum of data) {
-        if (!datum || !datum.key) {
-          if (managedStorage.options.logging) console.error(`Health check failed for invalid data: ${JSON.stringify(datum)}`);
-          return false; // Ensure datum is valid
-        }
-        await managedStorage.getItem(datum.key); // Use getItem to ensure we can access the value
-      }
-      const keys = await managedStorage.keys();
-      if (keys.length !== data.length) return false; // Ensure keys match data length
-      const values = await managedStorage.values();
-      if (values.length !== data.length) return false; // Ensure values match data length
-      return true; // Storage is healthy
-    } catch (error) {
-      if (managedStorage.options.logging) console.error('Health check failed:', error);
-      return false; // Storage is not healthy
-    }
+  /**
+   *  Performs a health check on the storage by attempting to access its data, keys, and values.
+   *
+   * @returns {Promise<boolean>} A promise that resolves with true if the storage is healthy, otherwise false.
+   */
+  async healthCheck(): Promise<boolean> {
+    return performHealthCheck(this.storage);
   }
 
   /**

@@ -1,3 +1,5 @@
+<!-- eslint-disable markdown/no-multiple-h1 -->
+
 # NodeStorageManager and NodeStorage
 
 [![npm version](https://img.shields.io/npm/v/node-persist-manager.svg)](https://www.npmjs.com/package/node-persist-manager)

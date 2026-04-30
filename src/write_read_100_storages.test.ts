@@ -56,7 +56,7 @@ describe('NodeStorageManager with NodeStorage', () => {
   it('storageManager should pass healthCheck', async () => {
     expect(storageManager).toBeDefined();
     if (!storageManager) return;
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeTruthy();
+    expect(await storageManager.healthCheck()).toBeTruthy();
   });
 
   it('storages should pass healthCheck', async () => {
@@ -68,7 +68,7 @@ describe('NodeStorageManager with NodeStorage', () => {
     for (const storageName of storages) {
       const storage = await storageManager.createStorage(storageName);
       expect(storage).toBeInstanceOf(NodeStorage);
-      expect(await NodeStorage.healthCheck((storage as any).storage)).toBeTruthy();
+      expect(await storage.healthCheck()).toBeTruthy();
     }
   }, 60000);
 

@@ -202,17 +202,17 @@ describe('NodeStorageManager with NodeStorage', () => {
     jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve(null);
     });
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeFalsy();
+    expect(await storageManager.healthCheck()).toBeFalsy();
 
     jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve([{ key: undefined, value: undefined }]);
     });
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeFalsy();
+    expect(await storageManager.healthCheck()).toBeFalsy();
 
     jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
       throw new Error('Health check failed');
     });
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeFalsy();
+    expect(await storageManager.healthCheck()).toBeFalsy();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed for invalid data: {}');
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed:', expect.any(Error));
@@ -226,17 +226,17 @@ describe('NodeStorageManager with NodeStorage', () => {
     jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve(null);
     });
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeFalsy();
+    expect(await storageManager.healthCheck()).toBeFalsy();
 
     jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve([{ key: undefined, value: undefined }]);
     });
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeFalsy();
+    expect(await storageManager.healthCheck()).toBeFalsy();
 
     jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
       throw new Error('Health check failed');
     });
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeFalsy();
+    expect(await storageManager.healthCheck()).toBeFalsy();
   });
 
   it('storage healthCheck should fail with logging', async () => {
@@ -247,17 +247,17 @@ describe('NodeStorageManager with NodeStorage', () => {
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve(null);
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve([{ key: undefined, value: undefined }]);
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       throw new Error('Health check failed');
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed for invalid data: {}');
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed:', expect.any(Error));
@@ -271,17 +271,17 @@ describe('NodeStorageManager with NodeStorage', () => {
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve(null);
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve([{ key: undefined, value: undefined }]);
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       throw new Error('Health check failed');
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve([{ key: 'booleanKey', value: true }]);
@@ -289,7 +289,7 @@ describe('NodeStorageManager with NodeStorage', () => {
     jest.spyOn((storage as any).storage, 'keys').mockImplementationOnce(() => {
       return Promise.resolve([]);
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
 
     jest.spyOn((storage as any).storage, 'data').mockImplementationOnce(() => {
       return Promise.resolve([{ key: 'booleanKey', value: true }]);
@@ -300,19 +300,19 @@ describe('NodeStorageManager with NodeStorage', () => {
     jest.spyOn((storage as any).storage, 'values').mockImplementationOnce(() => {
       return Promise.resolve([]);
     });
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeFalsy();
+    expect(await storage.healthCheck()).toBeFalsy();
   });
 
   it('storageManager should pass healthCheck', async () => {
     expect(storageManager).toBeDefined();
     if (!storageManager) return;
-    expect(await NodeStorage.healthCheck((storageManager as any).storage)).toBeTruthy();
+    expect(await storageManager.healthCheck()).toBeTruthy();
   });
 
   it('storage should pass healthCheck', async () => {
     expect(storage).toBeDefined();
     if (!storage) return;
-    expect(await NodeStorage.healthCheck((storage as any).storage)).toBeTruthy();
+    expect(await storage.healthCheck()).toBeTruthy();
   });
 
   it('should close the storage', async () => {
