@@ -214,6 +214,26 @@ export class NodeStorageManager {
   }
 
   /**
+   * Retrieves a value for a given key from the storage.
+   * If the key does not exist, returns a default value if provided.
+   *
+   * @template T - The type of the value to retrieve.
+   * @param {NodeStorageKey} key - The key of the value to retrieve.
+   * @param {T} [defaultValue] - The default value to return if the key is not found.
+   * @returns {Promise<T>} A promise that resolves with the value.
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async get<T = any>(key: NodeStorageKey, defaultValue?: T): Promise<T> {
+    const datum = await this.storage.getDatum(key);
+
+    // const value = await this.storage.getItem(key);
+    if (datum && datum.key === key) {
+      return datum.value as T;
+    }
+    return defaultValue as T; // Return undefined if no default value is provided
+  }
+
+  /**
    *  Performs a health check on the storage by attempting to access its data, keys, and values.
    *
    * @returns {Promise<boolean>} A promise that resolves with true if the storage is healthy, otherwise false.

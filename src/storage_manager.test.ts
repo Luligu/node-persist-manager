@@ -107,6 +107,16 @@ describe('NodeStorageManager with NodeStorage', () => {
     expect(values).toEqual([['testStorage']]);
   });
 
+  it('should return the storageManager key value', async () => {
+    const keys = await storageManager.get('storageNames');
+    expect(keys).toEqual(['testStorage']);
+  });
+
+  it('should return undefined for non-existing key', async () => {
+    const keys = await storageManager.get('nonExistingKey');
+    expect(keys).toBeUndefined();
+  });
+
   it('storageManager should pass healthCheck', async () => {
     expect(storageManager).toBeDefined();
     if (!storageManager) return;
