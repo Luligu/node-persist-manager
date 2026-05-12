@@ -31,12 +31,14 @@ import NodePersist from 'node-persist';
 
 type InitOptions = NodePersist.InitOptions;
 type LocalStorage = NodePersist.LocalStorage;
-type ManagedLocalStorage = LocalStorage & {
+// Omit getDatum to replace its @types declaration (wrongly Datum|void) with the actual Promise-based return type.
+type ManagedLocalStorage = Omit<LocalStorage, 'getDatum'> & {
   options: InitOptions;
   initSync(options?: InitOptions): InitOptions;
   _writeQueueInterval?: NodeJS.Timeout;
   _expiredKeysInterval?: NodeJS.Timeout;
   stopWriteQueueInterval(): void;
+  getDatum(key: string): Promise<NodePersist.Datum | undefined>;
 };
 
 /**
@@ -46,7 +48,7 @@ type ManagedLocalStorage = LocalStorage & {
  * @returns {ManagedLocalStorage} The storage instance with internal timer members.
  */
 function asManagedLocalStorage(storage: LocalStorage): ManagedLocalStorage {
-  return storage as ManagedLocalStorage;
+  return storage as unknown as ManagedLocalStorage;
 }
 
 /**
@@ -121,7 +123,8 @@ export class NodeStorageManager {
   /**
    * Closes the node storage manager by stopping the expired keys interval and the write queue interval.
    */
-  async close() {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async close(): Promise<void> {
     this.storage.stopExpiredKeysInterval();
     this.storage._expiredKeysInterval = undefined;
     this.storage.stopWriteQueueInterval();
@@ -200,7 +203,7 @@ export class NodeStorageManager {
    * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
    */
   async keys(): Promise<NodeStorageKey[]> {
-    return await this.storage.keys();
+    return this.storage.keys();
   }
 
   /**
@@ -210,7 +213,7 @@ export class NodeStorageManager {
    * @returns {Promise<T[]>} A promise that resolves with an array of values.
    */
   async values<T = unknown>(): Promise<T[]> {
-    return (await this.storage.values()) as unknown as Promise<T[]>;
+    return this.storage.values() as Promise<T[]>;
   }
 
   /**
@@ -222,8 +225,7 @@ export class NodeStorageManager {
    * @param {T} [defaultValue] - The default value to return if the key is not found.
    * @returns {Promise<T>} A promise that resolves with the value.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async get<T = any>(key: NodeStorageKey, defaultValue?: T): Promise<T> {
+  async get<T = unknown>(key: NodeStorageKey, defaultValue?: T): Promise<T> {
     const datum = await this.storage.getDatum(key);
 
     // const value = await this.storage.getItem(key);
@@ -253,7 +255,7 @@ export class NodeStorageManager {
     storageNames.forEach((name) => {
       console.log(`- ${name}`);
     });
-    return await this.storage.length();
+    return this.storage.length();
   }
 }
 
@@ -267,18 +269,19 @@ export class NodeStorage {
   /**
    * Creates an instance of NodeStorage.
    *
-   * @param {LocalStorage} storage - The local storage instance.
+   * @param {ManagedLocalStorage} storage - The local storage instance.
    * @param {InitOptions} initOptions - The initialization options.
    */
-  constructor(storage: LocalStorage, initOptions: InitOptions) {
-    this.storage = asManagedLocalStorage(storage);
+  constructor(storage: ManagedLocalStorage, initOptions: InitOptions) {
+    this.storage = storage;
     this.initOptions = initOptions;
   }
 
   /**
    * Closes the node storage by stopping the expired keys interval and the write queue interval.
    */
-  async close() {
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async close(): Promise<void> {
     this.storage.stopExpiredKeysInterval();
     this.storage._expiredKeysInterval = undefined;
     this.storage.stopWriteQueueInterval();
@@ -293,9 +296,8 @@ export class NodeStorage {
    * @param {T} value - The value to store.
    * @returns {Promise<NodePersist.WriteFileResult>} A promise that resolves with the result of writing the file.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async set<T = any>(key: NodeStorageKey, value: T): Promise<NodePersist.WriteFileResult> {
-    return await this.storage.setItem(key, value);
+  async set<T = unknown>(key: NodeStorageKey, value: T): Promise<NodePersist.WriteFileResult> {
+    return this.storage.setItem(key, value);
   }
 
   /**
@@ -307,8 +309,7 @@ export class NodeStorage {
    * @param {T} [defaultValue] - The default value to return if the key is not found.
    * @returns {Promise<T>} A promise that resolves with the value.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async get<T = any>(key: NodeStorageKey, defaultValue?: T): Promise<T> {
+  async get<T = unknown>(key: NodeStorageKey, defaultValue?: T): Promise<T> {
     const datum = await this.storage.getDatum(key);
 
     // const value = await this.storage.getItem(key);
@@ -355,7 +356,7 @@ export class NodeStorage {
    * @returns {Promise<NodePersist.DeleteFileResult>} A promise that resolves with the result of deleting the file.
    */
   async remove(key: NodeStorageKey): Promise<NodePersist.DeleteFileResult> {
-    return await this.storage.removeItem(key);
+    return this.storage.removeItem(key);
   }
 
   /**
@@ -378,7 +379,7 @@ export class NodeStorage {
    * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
    */
   async keys(): Promise<NodeStorageKey[]> {
-    return await this.storage.keys();
+    return this.storage.keys();
   }
 
   /**
@@ -388,7 +389,7 @@ export class NodeStorage {
    * @returns {Promise<T[]>} A promise that resolves with an array of values.
    */
   async values<T = unknown>(): Promise<T[]> {
-    return (await this.storage.values()) as unknown as Promise<T[]>;
+    return this.storage.values() as Promise<T[]>;
   }
 
   /**
@@ -406,7 +407,7 @@ export class NodeStorage {
    * @returns {Promise<void>} A promise that resolves when the storage is cleared.
    */
   async clear(): Promise<void> {
-    return await this.storage.clear();
+    return this.storage.clear();
   }
 
   /**
@@ -420,6 +421,6 @@ export class NodeStorage {
     for (const key of keys) {
       console.log(`- ${key}: ${await this.storage.get(key)}`);
     }
-    return await this.storage.length();
+    return this.storage.length();
   }
 }

@@ -17,6 +17,7 @@ If you like this project and find it useful, please consider giving it a star on
 ### Added
 
 - [NodeStorageManager]: Add keys(), values() and healthCheck() to NodeStorageManager.
+- [ManagedLocalStorage]: Add getDatum() with correct Promise return type and changed any with unknown.
 
 ### Changed
 
