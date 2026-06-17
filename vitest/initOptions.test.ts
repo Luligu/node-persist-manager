@@ -1,58 +1,58 @@
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
-import { jest } from '@jest/globals';
-import NodePersist, { LocalStorage } from 'node-persist';
+import NodePersist, { type LocalStorage } from 'node-persist';
+import { vi } from 'vitest';
 
-import { NodeStorageManager } from './nodeStorage.js';
+import { NodeStorageManager } from '../src/nodeStorage.js';
 
 // Mock node-persist module
-jest.spyOn(NodePersist, 'create').mockImplementation((options) => {
+vi.spyOn(NodePersist, 'create').mockImplementation((options) => {
   return {
-    initSync: jest.fn(),
+    initSync: vi.fn<() => void>(),
     options,
   } as unknown as LocalStorage;
 });
 
 // Mock path module
-jest.spyOn(path, 'join').mockImplementation((...args) => args.join('/'));
+vi.spyOn(path, 'join').mockImplementation((...args) => args.join('/'));
 
 // Mock fs/promises module
-jest.spyOn(fsPromises, 'rm').mockResolvedValue(undefined);
+vi.spyOn(fsPromises, 'rm').mockResolvedValue(void 0);
 
 describe('NodeStorageManager', () => {
   const defaultDir = process.cwd() + '/node_storage';
-  const customDir = path.join('.cache', 'jest', 'custom_dir');
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
+  const customDir = path.join('.cache', 'vitest', 'custom_dir');
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
 
   beforeAll(() => {
     // Spy on and mock console.log
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation((...args: any[]) => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation((...args: any[]) => {
       //
     });
   });
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  it('should create and initialize storage with default options', async () => {
+  it('should create and initialize storage with default options', () => {
     new NodeStorageManager();
     expect(NodePersist.create).toHaveBeenCalledWith({
       dir: defaultDir,
       logging: false,
       writeQueue: false,
-      expiredInterval: undefined,
+      expiredInterval: void 0,
     });
   });
 
-  it('should merge custom init options with defaults', async () => {
+  it('should merge custom init options with defaults', () => {
     const customOptions = { dir: customDir, logging: true };
     const expectedOptions = {
       dir: customDir,
       logging: true,
       writeQueue: false,
-      expiredInterval: undefined,
+      expiredInterval: void 0,
     };
     new NodeStorageManager(customOptions);
     expect(NodePersist.create).toHaveBeenCalledWith(expectedOptions);

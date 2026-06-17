@@ -1,35 +1,35 @@
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
-import { NodeStorage, NodeStorageManager } from './nodeStorage.js';
+import { NodeStorage, NodeStorageManager } from '../src/nodeStorage.js';
 
 // Mock fs/promises module
-const rmSpy = jest.spyOn(fsPromises, 'rm');
+const rmSpy = vi.spyOn(fsPromises, 'rm');
 
 describe('NodeStorageManager with NodeStorage', () => {
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
-  let consoleErrorSpy: jest.SpiedFunction<typeof console.error>;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
   let storageManager: NodeStorageManager;
   let storage: NodeStorage;
-  const storageDir = path.join('.cache', 'jest', 'node_storage');
-  const customDir1 = path.join('.cache', 'jest', 'custom_dir_1');
-  const customDir2 = path.join('.cache', 'jest', 'custom_dir_2');
+  const storageDir = path.join('.cache', 'vitest', 'node_storage');
+  const customDir1 = path.join('.cache', 'vitest', 'custom_dir_1');
+  const customDir2 = path.join('.cache', 'vitest', 'custom_dir_2');
 
   beforeAll(async () => {
     // Spy on and mock console.log
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation((...args: any[]) => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation((...args: any[]) => {
       // Mock implementation or empty function
     });
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args: any[]) => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation((...args: any[]) => {
       // Mock implementation or empty function
     });
     await fsPromises.rm(storageDir, { recursive: true, force: true });
     storageManager = new NodeStorageManager({ dir: storageDir });
   });
 
-  it('should create and initialize storage with default options', async () => {
+  it('should create and initialize storage with default options', () => {
     expect(storageManager).toBeInstanceOf(NodeStorageManager);
   });
 
@@ -127,19 +127,13 @@ describe('NodeStorageManager with NodeStorage', () => {
     expect(storageManager).toBeDefined();
     if (!storageManager) return;
     (storageManager as any).storage.options.logging = true;
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      return Promise.resolve(null);
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockResolvedValueOnce(null);
     expect(await storageManager.healthCheck()).toBeFalsy();
 
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      return Promise.resolve([{ key: undefined, value: undefined }]);
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockResolvedValueOnce([{ key: undefined, value: undefined }]);
     expect(await storageManager.healthCheck()).toBeFalsy();
 
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      throw new Error('Health check failed');
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockRejectedValueOnce(new Error('Health check failed'));
     expect(await storageManager.healthCheck()).toBeFalsy();
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed for invalid data: {}');
@@ -150,19 +144,13 @@ describe('NodeStorageManager with NodeStorage', () => {
   it('storageManager should fail healthCheck (no logging)', async () => {
     expect(storageManager).toBeDefined();
     if (!storageManager) return;
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      return Promise.resolve(null);
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockResolvedValueOnce(null);
     expect(await storageManager.healthCheck()).toBeFalsy();
 
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      return Promise.resolve([{ key: undefined, value: undefined }]);
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockResolvedValueOnce([{ key: undefined, value: undefined }]);
     expect(await storageManager.healthCheck()).toBeFalsy();
 
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      throw new Error('Health check failed');
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockRejectedValueOnce(new Error('Health check failed'));
     expect(await storageManager.healthCheck()).toBeFalsy();
   });
 
@@ -170,29 +158,19 @@ describe('NodeStorageManager with NodeStorage', () => {
     expect(storageManager).toBeDefined();
     if (!storageManager) return;
 
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      return Promise.resolve([{ key: 'test-key', value: 'test-value' }]);
-    });
-    jest.spyOn((storageManager as any).storage, 'keys').mockImplementationOnce(() => {
-      return Promise.resolve([]);
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockResolvedValueOnce([{ key: 'test-key', value: 'test-value' }]);
+    vi.spyOn((storageManager as any).storage, 'keys').mockResolvedValueOnce([]);
     expect(await storageManager.healthCheck()).toBeFalsy();
 
-    jest.spyOn((storageManager as any).storage, 'data').mockImplementationOnce(() => {
-      return Promise.resolve([{ key: 'test-key', value: 'test-value' }]);
-    });
-    jest.spyOn((storageManager as any).storage, 'keys').mockImplementationOnce(() => {
-      return Promise.resolve(['test-key']);
-    });
-    jest.spyOn((storageManager as any).storage, 'values').mockImplementationOnce(() => {
-      return Promise.resolve([]);
-    });
+    vi.spyOn((storageManager as any).storage, 'data').mockResolvedValueOnce([{ key: 'test-key', value: 'test-value' }]);
+    vi.spyOn((storageManager as any).storage, 'keys').mockResolvedValueOnce(['test-key']);
+    vi.spyOn((storageManager as any).storage, 'values').mockResolvedValueOnce([]);
     expect(await storageManager.healthCheck()).toBeFalsy();
   });
 
   it('should not start writeInterval with writeQueue = false', async () => {
     await fsPromises.rm(customDir1, { recursive: true, force: true });
-    const customOptions = { dir: customDir1, writeQueue: false, expiredInterval: undefined };
+    const customOptions = { dir: customDir1, writeQueue: false, expiredInterval: void 0 };
     storageManager = new NodeStorageManager(customOptions);
     storage = await storageManager.createStorage('testStorage');
     expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();
@@ -211,7 +189,7 @@ describe('NodeStorageManager with NodeStorage', () => {
 
   it('should start writeInterval with writeQueue = true', async () => {
     await fsPromises.rm(customDir2, { recursive: true, force: true });
-    const customOptions = { dir: customDir2, writeQueue: true, expiredInterval: undefined };
+    const customOptions = { dir: customDir2, writeQueue: true, expiredInterval: void 0 };
     storageManager = new NodeStorageManager(customOptions);
     storage = await storageManager.createStorage('testStorage');
     expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();

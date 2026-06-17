@@ -22,7 +22,8 @@
  * limitations under the License.
  */
 
-/* eslint-disable no-console */
+// oxlint-disable no-console
+// oxlint-disable typescript/no-unsafe-type-assertion
 
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -229,7 +230,7 @@ export class NodeStorageManager {
     const datum = await this.storage.getDatum(key);
 
     // const value = await this.storage.getItem(key);
-    if (datum && datum.key === key) {
+    if (datum?.key === key) {
       return datum.value as T;
     }
     return defaultValue as T; // Return undefined if no default value is provided
@@ -313,7 +314,7 @@ export class NodeStorage {
     const datum = await this.storage.getDatum(key);
 
     // const value = await this.storage.getItem(key);
-    if (datum && datum.key === key) {
+    if (datum?.key === key) {
       return datum.value as T;
     }
     return defaultValue as T; // Return undefined if no default value is provided

@@ -2,6 +2,20 @@
 
 # NodeStorageManager and NodeStorage Changelog
 
+[![npm version](https://img.shields.io/npm/v/node-persist-manager.svg)](https://www.npmjs.com/package/node-persist-manager)
+[![npm downloads](https://img.shields.io/npm/dt/node-persist-manager.svg)](https://www.npmjs.com/package/node-persist-manager)
+![Node.js CI](https://github.com/Luligu/node-persist-manager/actions/workflows/build.yml/badge.svg)
+![CodeQL](https://github.com/Luligu/node-persist-manager/actions/workflows/codeql.yml/badge.svg)
+[![codecov](https://codecov.io/gh/Luligu/node-ansi-logger/branch/main/graph/badge.svg)](https://codecov.io/gh/Luligu/node-ansi-logger)
+[![tested with Vitest](https://img.shields.io/badge/tested_with-Vitest-6E9F18.svg?logo=vitest&logoColor=white)](https://vitest.dev)
+[![styled with Oxc](https://img.shields.io/badge/styled_with-Oxc-9BE4E0.svg?logo=oxc&logoColor=white)](https://oxc.rs/docs/guide/usage/formatter.html)
+[![linted with Oxc](https://img.shields.io/badge/linted_with-Oxc-9BE4E0.svg?logo=oxc&logoColor=white)](https://oxc.rs/docs/guide/usage/linter.html)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![TypeScript Native](https://img.shields.io/badge/TypeScript_Native-3178C6?logo=typescript&logoColor=white)](https://github.com/microsoft/typescript-go)
+[![ESM](https://img.shields.io/badge/ESM-Node.js-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
+
+---
+
 All notable changes to this project will be documented in this file.
 
 If you like this project and find it useful, please consider giving it a star on [GitHub](https://github.com/Luligu/node-persist-manager) and sponsoring it.
@@ -18,37 +32,33 @@ If you like this project and find it useful, please consider giving it a star on
 
 - [NodeStorageManager]: Add keys(), values() and healthCheck() to NodeStorageManager.
 - [ManagedLocalStorage]: Add getDatum() with correct Promise return type and changed any with unknown.
-- [package]: Enable @typescript-eslint promise rules.
 
 ### Changed
 
 - [package]: Update dependencies.
-- [package]: Bump package to `automator` v.3.1.10.
-- [package]: Bump `eslint` to v.10.4.0.
-- [package]: Bump `@types/node` to v.25.9.1.
-- [package]: Bump `ts-jest` to v.29.4.11.
-- [package]: Bump `typescript-eslint` to v.8.59.4.
-- [package]: Bump `eslint-plugin-jsdoc` to v.63.0.0.
-- [package]: Bump `@eslint/markdown` to v.8.0.2.
-- [package]: Bump `npm-check-updates` to v.22.2.0.
-- [package]: Update `.devcontainer/devcontainer.json`.
-- [package]: Update `.vscode/settings.json`.
-- [package]: Add `.vscode/extensions.json`.
+- [package]: Bump package to `automator` v.3.1.12 and the new toolchain.
 - [package]: Bump `typescript` to v.6.0.3.
-- [package]: Bump `jest` to v.30.4.2.
-- [eslint]: Add `eslint` v.2.0.4 config.
-- [prettier]: Add `prettier` v.2.0.0 config.
-- [jest]: Add `jest` v.2.0.1 config.
+
+- [package]: Bump `.devcontainer/devcontainer.json` config to v.1.0.3.
+- [package]: Bump `.vscode/settings.json` config to v.1.0.3.
+- [package]: Bump `.vscode/extensions.json` config to v.1.0.3.
+- [package]: Bump `.vscode/tasks.json` config to v.1.0.1.
+- [workflows]: Bump `build.yml` workflow to v.2.0.5.
+- [workflows]: Bump `codecov.yml` workflow to v.2.0.5.
+- [workflows]: Bump `publish.yml` workflow to v.2.0.5.
+- [workflows]: Bump `codeql.yml` workflow to v.2.0.0.
+
 - [package]: Refactor `scripts`.
 - [package]: Add package script `typecheck`.
 - [package]: Add Node.js 26 to package `engines` field.
 - [workflows]: Add Node.js 26 to `build.yml` Node matrix and remove Node.js 20.
-- [eslint]: Remove `eslint-plugin-promise` (not actively maintained) and add optional @typescript-eslint promise rules.
-- [package]: Add `.vscode\tasks.json`.
-- [package]: Add `.vscode\settings.json`.
-- [devcontainer]: Add `Claude Code for VS Code extension` to Dev Container.
+- [devcontainer]: Add `Claude Code VS Code extension` to Dev Container.
+- [devcontainer]: Add `Codex for VS Code extension` to Dev Container.
+- [devcontainer]: Add `Jest / Vitest Runner VS Code extension` to Dev Container.
 - [agent]: Add `.github\copilot-instructions.md` for Copilot.
-- [agent]: Add `.claude\CLAUDE.md` for Claude.
+- [agent]: Add `CLAUDE.md` for Claude.
+- [agent]: Add `AGENTS.md` for Codex.
+- [agent]: Add `.codex` config for Codex.
 - [agent]: Add agent custom instructions (`testing`) for Copilot and Claude.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>

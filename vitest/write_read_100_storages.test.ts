@@ -1,9 +1,9 @@
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
-import { jest } from '@jest/globals';
+import { vi } from 'vitest';
 
-import { NodeStorage, NodeStorageManager } from './nodeStorage.js';
+import { NodeStorage, NodeStorageManager } from '../src/nodeStorage.js';
 
 interface DatumTest {
   key: string;
@@ -12,13 +12,13 @@ interface DatumTest {
 }
 
 describe('NodeStorageManager with NodeStorage', () => {
-  let consoleLogSpy: jest.SpiedFunction<typeof console.log>;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
   let storageManager: NodeStorageManager;
-  const dir = path.join('.cache', 'jest', 'custom_dir_4');
+  const dir = path.join('.cache', 'vitest', 'custom_dir_4');
 
   beforeAll(async () => {
     // Spy on and mock console.log
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation((...args: any[]) => {
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation((...args: any[]) => {
       // Mock implementation or empty function
     });
     await fsPromises.rm(dir, { recursive: true, force: true });
