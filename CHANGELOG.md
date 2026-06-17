@@ -53,7 +53,7 @@ If you like this project and find it useful, please consider giving it a star on
 - [package]: Add Node.js 26 to package `engines` field.
 - [workflows]: Add Node.js 26 to `build.yml` Node matrix and remove Node.js 20.
 - [devcontainer]: Add `Claude Code VS Code extension` to Dev Container.
-- [devcontainer]: Add `Codex for VS Code extension` to Dev Container.
+- [devcontainer]: Add `Codex VS Code extension` to Dev Container.
 - [devcontainer]: Add `Jest / Vitest Runner VS Code extension` to Dev Container.
 - [agent]: Add `.github\copilot-instructions.md` for Copilot.
 - [agent]: Add `CLAUDE.md` for Claude.
