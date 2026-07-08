@@ -1,4 +1,11 @@
-/* eslint-disable no-console */
+/**
+ * @file vitest/write_read_100.test.ts
+ * @description This file contains the write/read stress tests (100 items) for the NodeStorageManager and NodeStorage classes.
+ * @author Luca Liguori
+ */
+
+/* oxlint-disable no-console */
+
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 

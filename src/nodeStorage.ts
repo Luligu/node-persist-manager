@@ -1,7 +1,6 @@
 /**
- * This file contains the classes NodeStorageManager and NodeStorage
- *
- * @file nodeStorage.ts
+ * @file src/nodeStorage.ts
+ * @description This file contains the classes NodeStorageManager and NodeStorage
  * @author Luca Liguori
  * @created 2024-02-02
  * @version 1.0.1
@@ -22,8 +21,8 @@
  * limitations under the License.
  */
 
-// oxlint-disable no-console
-// oxlint-disable typescript/no-unsafe-type-assertion
+/* oxlint-disable no-console */
+/* oxlint-disable typescript/no-unsafe-type-assertion */
 
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -124,7 +123,7 @@ export class NodeStorageManager {
   /**
    * Closes the node storage manager by stopping the expired keys interval and the write queue interval.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  // oxlint-disable-next-line typescript/require-await
   async close(): Promise<void> {
     this.storage.stopExpiredKeysInterval();
     this.storage._expiredKeysInterval = undefined;
@@ -140,7 +139,7 @@ export class NodeStorageManager {
    */
   async createStorage(storageName: string): Promise<NodeStorage> {
     const initOptions: InitOptions = {};
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // oxlint-disable-next-line typescript/no-non-null-assertion
     Object.assign(initOptions, this.initOptions, { dir: path.join(this.initOptions.dir!, '.' + storageName) } as InitOptions);
     const storage = asManagedLocalStorage(NodePersist.create(initOptions));
     await storage.init(initOptions);
@@ -166,7 +165,7 @@ export class NodeStorageManager {
    * @returns {Promise<boolean>} A promise that resolves to true if the storage was successfully removed, otherwise false.
    */
   async removeStorage(storageName: string): Promise<boolean> {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // oxlint-disable-next-line typescript/no-non-null-assertion
     const dir = path.join(this.initOptions.dir!, '.' + storageName);
     try {
       await rm(dir, { recursive: true });
@@ -281,7 +280,7 @@ export class NodeStorage {
   /**
    * Closes the node storage by stopping the expired keys interval and the write queue interval.
    */
-  // eslint-disable-next-line @typescript-eslint/require-await
+  // oxlint-disable-next-line typescript/require-await
   async close(): Promise<void> {
     this.storage.stopExpiredKeysInterval();
     this.storage._expiredKeysInterval = undefined;

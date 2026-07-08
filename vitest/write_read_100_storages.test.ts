@@ -1,3 +1,9 @@
+/**
+ * @file vitest/write_read_100_storages.test.ts
+ * @description This file contains the write/read stress tests across 100 storages for the NodeStorageManager class.
+ * @author Luca Liguori
+ */
+
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 

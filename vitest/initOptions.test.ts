@@ -1,3 +1,9 @@
+/**
+ * @file vitest/initOptions.test.ts
+ * @description This file contains the tests for the NodeStorageManager init options.
+ * @author Luca Liguori
+ */
+
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 

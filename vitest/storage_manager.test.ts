@@ -1,3 +1,9 @@
+/**
+ * @file vitest/storage_manager.test.ts
+ * @description This file contains the tests for the NodeStorageManager and NodeStorage classes.
+ * @author Luca Liguori
+ */
+
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
