@@ -1,5 +1,3 @@
-<!-- eslint-disable markdown/no-missing-label-refs -->
-
 # NodeStorageManager and NodeStorage Changelog
 
 [![npm version](https://img.shields.io/npm/v/node-persist-manager.svg)](https://www.npmjs.com/package/node-persist-manager)
