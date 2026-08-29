@@ -1,6 +1,6 @@
 {
   "name": "node-persist-manager",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "Asyncronous Node.js storage manager in type script",
   "author": "https://github.com/Luligu",
   "license": "Apache-2.0",
