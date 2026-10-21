@@ -85,11 +85,11 @@ describe('NodeStorageManager with NodeStorage', () => {
       const storage = await storageManager.createStorage(storageName);
       expect(storage).toBeInstanceOf(NodeStorage);
       await storage.close();
-      expect((storage as any).storage._writeQueueInterval).toBeUndefined();
-      expect((storage as any).storage._expiredKeysInterval).toBeUndefined();
+      expect((storage as any).storage.database).toBeUndefined();
+      expect((storage as any).storage.expiredKeysInterval).toBeUndefined();
     }
     await storageManager.close();
-    expect((storageManager as any).storage._writeQueueInterval).toBeUndefined();
-    expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();
+    expect((storageManager as any).storage.database).toBeUndefined();
+    expect((storageManager as any).storage.expiredKeysInterval).toBeUndefined();
   });
 });

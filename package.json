@@ -1,7 +1,7 @@
 {
   "name": "node-persist-manager",
   "version": "2.1.2",
-  "description": "Asyncronous Node.js storage manager in type script",
+  "description": "Asyncronous Node.js storage manager in type script built on node:sqlite and bun:sqlite",
   "author": "https://github.com/Luligu",
   "license": "Apache-2.0",
   "homepage": "https://www.npmjs.com/package/node-persist-manager",
@@ -19,6 +19,7 @@
   "keywords": [
     "node-persist",
     "persist",
+    "sqlite",
     "storage",
     "context",
     "NodeStorageManager",
@@ -34,7 +35,7 @@
     }
   },
   "engines": {
-    "node": ">=20.19.0 <21.0.0 || >=22.13.0 <23.0.0 || >=24.0.0 <25.0.0 || >=26.0.0 <27.0.0"
+    "node": ">=22.13.0 <23.0.0 || >=24.0.0 <25.0.0 || >=26.0.0 <27.0.0"
   },
   "files": [
     "bin",
@@ -85,12 +86,8 @@
     "runMeBeforePublish": "npm run cleanBuild && npm run format && npm run lint && npm run build && npm run typecheck && npm run test:coverage",
     "prepublishOnly": "npm run cleanBuildProduction && npm pkg delete devDependencies scripts automator && node scripts/prepublish-clean.mjs && npm install --no-fund --no-audit --omit=dev && npm shrinkwrap --omit=dev"
   },
-  "dependencies": {
-    "node-persist": "4.0.4"
-  },
   "devDependencies": {
     "@types/node": "26.6.5",
-    "@types/node-persist": "3.1.8",
     "@vitest/coverage-v8": "5.0.5",
     "oxfmt": "0.74.0",
     "oxlint": "1.89.0",

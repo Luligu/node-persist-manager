@@ -25,12 +25,22 @@ If you like this project and find it useful, please consider giving it a star on
 
 ### Added
 
+- [storage]: Each storage is a SQLite database `storage.sqlite` in its directory, using the WAL journal with synchronous `NORMAL`.
+- [storage]: Import the existing `node-persist` files when the database is created. The `node-persist` files are left in place.
+- [storage]: Export the `InitOptions`, `WriteFileResult` and `DeleteFileResult` types, compatible with the `node-persist` ones.
+
 - [devcontainer]: Add [`Dev Container`](.devcontainer/README.md) v.2.2.0 with dual Node and Bun runtime support.
 - [agents]: Add a [`shared setup`](.agents/README.md) for all agents: OpenAI Codex, Claude Code, GitHub Copilot and Google Gemini / Antigravity.
 - [agents]: Add [`commit message instructions`](.github/commit-message-instructions.md) v.1.0.0 for the VS Code Copilot "Generate Commit Message" button (Conventional Commits).
 
 ### Changed
 
+- [storage]: Breaking: replace `node-persist` with the built-in SQLite of the runtime: `node:sqlite` on Node.js and `bun:sqlite` on Bun. The public API is unchanged.
+- [engines]: Breaking: require Node.js 22.13 or later (`node:sqlite` is not available on Node.js 20).
+- [storage]: Breaking: `keys()`, `values()` and `data()` return the items in insertion order (`node-persist` returned them in the order of the sha256 file names).
+- [storage]: `close()` closes the database; the database is reopened if the storage is used again.
+- [storage]: `removeStorage()` closes the databases of the open `NodeStorage` instances before removing the directory.
+- [storage]: The `writeQueue`, `writeQueueIntervalMs`, `writeQueueWriteOnlyLast` and `encoding` options are accepted and ignored.
 - [vscode]: Update `.vscode/settings.json` to v.1.0.16.
 - [config]: Update Oxlint and Oxfmt configurations to v.1.2.0 and Antigravity settings to v.1.0.6.
 - [styleguide]: Update [`STYLEGUIDE.md`](STYLEGUIDE.md) to v.1.1.0: align it with the lint and format config and add the Commit Messages and Changelog sections.
@@ -42,6 +52,10 @@ If you like this project and find it useful, please consider giving it a star on
 - [package]: Bump `vitest` to v.5.0.5.
 - [package]: Bump `@vitest/coverage-v8` to v.5.0.5.
 - [package]: Bump `@types/node` to v.26.6.5.
+
+### Removed
+
+- [package]: Remove the `node-persist` dependency and the `@types/node-persist` dev dependency.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 

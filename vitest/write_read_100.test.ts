@@ -9,10 +9,9 @@
 import fsPromises from 'node:fs/promises';
 import path from 'node:path';
 
-import type NodePersist from 'node-persist';
 import { vi } from 'vitest';
 
-import { type NodeStorage, NodeStorageManager } from '../src/nodeStorage.js';
+import { type NodeStorage, NodeStorageManager, type WriteFileResult } from '../src/nodeStorage.js';
 
 interface DatumTest {
   key: string;
@@ -158,13 +157,13 @@ describe('NodeStorageManager with NodeStorage', () => {
     expect(await storage.data()).toEqual(data);
   });
 
-  it('should return the keys', async () => {
-    const keys = ['stringArrayKey', 'stringKey', 'nullKey', 'undefinedKey', 'objectKey', 'numberKey', 'booleanKey'];
+  it('should return the keys in insertion order', async () => {
+    const keys = ['numberKey', 'stringKey', 'booleanKey', 'undefinedKey', 'nullKey', 'stringArrayKey', 'objectKey'];
     expect(await storage.keys()).toEqual(keys);
   });
 
-  it('should return the values', async () => {
-    const values = [[], '0.2345521', null, undefined, { key: 'abc', value: 234 }, 0.2345521, true];
+  it('should return the values in insertion order', async () => {
+    const values = [0.2345521, '0.2345521', true, undefined, null, [], { key: 'abc', value: 234 }];
     expect(await storage.values()).toEqual(values);
   });
 
@@ -175,7 +174,7 @@ describe('NodeStorageManager with NodeStorage', () => {
   });
 
   it('should write and read 100 keys correctly', async () => {
-    const writePromises: Promise<NodePersist.WriteFileResult>[] = [];
+    const writePromises: Promise<WriteFileResult>[] = [];
     for (let i = 0; i < 100; i++) {
       const key = `Key${i.toString().padStart(3, '0')}`; // Generates Key000, Key001, ..., Key099
       const value = `Value${i}-0123456789-abcdefghijklmnopqrstuvwxyz`; // Generates Value0, Value1, ..., Value99
@@ -291,9 +290,9 @@ describe('NodeStorageManager with NodeStorage', () => {
   it('should close the storage', async () => {
     await storageManager.close();
     await storage.close();
-    expect((storageManager as any).storage._writeQueueInterval).toBeUndefined();
-    expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();
-    expect((storage as any).storage._writeQueueInterval).toBeUndefined();
-    expect((storage as any).storage._expiredKeysInterval).toBeUndefined();
+    expect((storageManager as any).storage.database).toBeUndefined();
+    expect((storageManager as any).storage.expiredKeysInterval).toBeUndefined();
+    expect((storage as any).storage.database).toBeUndefined();
+    expect((storage as any).storage.expiredKeysInterval).toBeUndefined();
   });
 });

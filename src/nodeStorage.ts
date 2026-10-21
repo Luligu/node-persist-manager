@@ -3,7 +3,7 @@
  * @description This file contains the classes NodeStorageManager and NodeStorage
  * @author Luca Liguori
  * @created 2024-02-02
- * @version 1.0.1
+ * @version 2.0.0
  * @license Apache-2.0
  *
  * Copyright 2024, 2025, 2026 Luca Liguori.
@@ -27,37 +27,17 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 
-import NodePersist from 'node-persist';
+import { type DeleteFileResult, type InitOptions, SqliteStorage, type WriteFileResult } from './sqliteStorage.js';
 
-type InitOptions = NodePersist.InitOptions;
-type LocalStorage = NodePersist.LocalStorage;
-// Omit getDatum to replace its @types declaration (wrongly Datum|void) with the actual Promise-based return type.
-type ManagedLocalStorage = Omit<LocalStorage, 'getDatum'> & {
-  options: InitOptions;
-  initSync(options?: InitOptions): InitOptions;
-  _writeQueueInterval?: NodeJS.Timeout;
-  _expiredKeysInterval?: NodeJS.Timeout;
-  stopWriteQueueInterval(): void;
-  getDatum(key: string): Promise<NodePersist.Datum | undefined>;
-};
+export type { DeleteFileResult, InitOptions, WriteFileResult } from './sqliteStorage.js';
 
 /**
- * Cast a node-persist storage instance to the internal shape used by this package.
+ * Performs a health check on a storage instance.
  *
- * @param {LocalStorage} storage - The node-persist storage instance.
- * @returns {ManagedLocalStorage} The storage instance with internal timer members.
- */
-function asManagedLocalStorage(storage: LocalStorage): ManagedLocalStorage {
-  return storage as unknown as ManagedLocalStorage;
-}
-
-/**
- * Performs a health check on a managed storage instance.
- *
- * @param {ManagedLocalStorage} storage - The managed storage instance to check.
+ * @param {SqliteStorage} storage - The storage instance to check.
  * @returns {Promise<boolean>} A promise that resolves with true if the storage is healthy, otherwise false.
  */
-async function performHealthCheck(storage: ManagedLocalStorage): Promise<boolean> {
+async function performHealthCheck(storage: SqliteStorage): Promise<boolean> {
   try {
     // Attempt to get data and keys, and access the first key
     const data = await storage.data();
@@ -87,9 +67,11 @@ export type NodeStorageName = string;
  * Class responsible for managing multiple node storages.
  */
 export class NodeStorageManager {
-  private readonly storage: ManagedLocalStorage;
-  private readonly initOptions: InitOptions;
+  private readonly storage: SqliteStorage;
+  private readonly initOptions: InitOptions & { dir: string };
   private storageNames: NodeStorageName[] = [];
+  // Weak references: the storages released by the caller can be garbage collected with their database
+  private readonly openStorages = new Map<NodeStorageName, Set<WeakRef<SqliteStorage>>>();
 
   /**
    * Initializes a new instance of NodeStorageManager with optional initialization options.
@@ -104,31 +86,23 @@ export class NodeStorageManager {
         writeQueue: false,
         expiredInterval: undefined,
         logging: false,
-      } as InitOptions,
+      },
       initOptions,
     );
 
-    // Create and initialize a new instace of LocalStorage
-    this.storage = asManagedLocalStorage(NodePersist.create(this.initOptions));
-    this.storage.initSync(this.initOptions);
-    if (this.storage.options.writeQueue === false) {
-      clearInterval(this.storage._writeQueueInterval);
-      this.storage._writeQueueInterval = undefined;
-    }
+    // Create and initialize a new instance of SqliteStorage
+    this.storage = new SqliteStorage(this.initOptions);
     if (this.initOptions.logging === true) {
       console.log(`Storage manager initialized with options ${JSON.stringify(this.initOptions)}`);
     }
   }
 
   /**
-   * Closes the node storage manager by stopping the expired keys interval and the write queue interval.
+   * Closes the node storage manager by stopping the expired keys interval and closing the database.
    */
   // oxlint-disable-next-line typescript/require-await
   async close(): Promise<void> {
-    this.storage.stopExpiredKeysInterval();
-    this.storage._expiredKeysInterval = undefined;
-    this.storage.stopWriteQueueInterval();
-    this.storage._writeQueueInterval = undefined;
+    this.storage.close();
   }
 
   /**
@@ -138,22 +112,21 @@ export class NodeStorageManager {
    * @returns {Promise<NodeStorage>} A promise that resolves to the newly created NodeStorage instance.
    */
   async createStorage(storageName: string): Promise<NodeStorage> {
-    const initOptions: InitOptions = {};
-    // oxlint-disable-next-line typescript/no-non-null-assertion
-    Object.assign(initOptions, this.initOptions, { dir: path.join(this.initOptions.dir!, '.' + storageName) } as InitOptions);
-    const storage = asManagedLocalStorage(NodePersist.create(initOptions));
-    await storage.init(initOptions);
-    if (storage.options.writeQueue === false) {
-      clearInterval(storage._writeQueueInterval);
-      storage._writeQueueInterval = undefined;
-    }
+    const initOptions = Object.assign({}, this.initOptions, { dir: path.join(this.initOptions.dir, '.' + storageName) });
+    const storage = new SqliteStorage(initOptions);
+    const openStorages = this.openStorages.get(storageName) ?? new Set<WeakRef<SqliteStorage>>();
+    openStorages.forEach((ref) => {
+      if (!ref.deref()) openStorages.delete(ref);
+    });
+    openStorages.add(new WeakRef(storage));
+    this.openStorages.set(storageName, openStorages);
 
     // Update storageNames
-    this.storageNames = (await this.storage.get('storageNames')) ?? [];
+    this.storageNames = ((await this.storage.getItem('storageNames')) as NodeStorageName[] | undefined) ?? [];
     if (!this.storageNames.includes(storageName)) {
       this.storageNames.push(storageName);
     }
-    await this.storage.set('storageNames', this.storageNames);
+    await this.storage.setItem('storageNames', this.storageNames);
 
     return new NodeStorage(storage, initOptions);
   }
@@ -161,28 +134,28 @@ export class NodeStorageManager {
   /**
    * Removes a storage by its name.
    *
+   * The databases of the NodeStorage instances of this storage are closed before removing its directory.
+   *
    * @param {string} storageName - The name of the storage to remove.
    * @returns {Promise<boolean>} A promise that resolves to true if the storage was successfully removed, otherwise false.
    */
   async removeStorage(storageName: string): Promise<boolean> {
-    // oxlint-disable-next-line typescript/no-non-null-assertion
-    const dir = path.join(this.initOptions.dir!, '.' + storageName);
+    const dir = path.join(this.initOptions.dir, '.' + storageName);
     try {
+      this.openStorages.get(storageName)?.forEach((ref) => ref.deref()?.close());
+      this.openStorages.delete(storageName);
       await rm(dir, { recursive: true });
-      // console.log('Storage removed');
 
       // Update storageNames
-      this.storageNames = (await this.storage.get('storageNames')) ?? [];
+      this.storageNames = ((await this.storage.getItem('storageNames')) as NodeStorageName[] | undefined) ?? [];
       const index = this.storageNames.indexOf(storageName);
       if (index > -1) {
         this.storageNames.splice(index, 1);
       }
-      await this.storage.set('storageNames', this.storageNames);
-      // console.log('Storage list:', await this.storage.get('storageNames') );
+      await this.storage.setItem('storageNames', this.storageNames);
 
       return true;
     } catch (_err) {
-      // console.error('Error removing storage:', _err);
       return false;
     }
   }
@@ -193,7 +166,7 @@ export class NodeStorageManager {
    * @returns {Promise<NodeStorageName[]>} A promise that resolves to an array of storage names.
    */
   async getStorageNames(): Promise<NodeStorageName[]> {
-    this.storageNames = (await this.storage.get('storageNames')) ?? [];
+    this.storageNames = ((await this.storage.getItem('storageNames')) as NodeStorageName[] | undefined) ?? [];
     return this.storageNames;
   }
 
@@ -251,7 +224,7 @@ export class NodeStorageManager {
    */
   async logStorage(): Promise<number> {
     console.log('This NodeStorageManager has these storages:');
-    const storageNames: NodeStorageName[] = (await this.storage.get('storageNames')) ?? [];
+    const storageNames = ((await this.storage.getItem('storageNames')) as NodeStorageName[] | undefined) ?? [];
     storageNames.forEach((name) => {
       console.log(`- ${name}`);
     });
@@ -263,29 +236,27 @@ export class NodeStorageManager {
  * Class representing a storage for nodes.
  */
 export class NodeStorage {
-  private readonly storage: ManagedLocalStorage;
+  private readonly storage: SqliteStorage;
   private readonly initOptions: InitOptions;
 
   /**
    * Creates an instance of NodeStorage.
    *
-   * @param {ManagedLocalStorage} storage - The local storage instance.
+   * @param {SqliteStorage} storage - The SQLite storage instance.
    * @param {InitOptions} initOptions - The initialization options.
    */
-  constructor(storage: ManagedLocalStorage, initOptions: InitOptions) {
+  constructor(storage: SqliteStorage, initOptions: InitOptions) {
     this.storage = storage;
     this.initOptions = initOptions;
   }
 
   /**
-   * Closes the node storage by stopping the expired keys interval and the write queue interval.
+   * Closes the node storage by stopping the expired keys interval and closing the database.
+   * The database is reopened if the storage is used again.
    */
   // oxlint-disable-next-line typescript/require-await
   async close(): Promise<void> {
-    this.storage.stopExpiredKeysInterval();
-    this.storage._expiredKeysInterval = undefined;
-    this.storage.stopWriteQueueInterval();
-    this.storage._writeQueueInterval = undefined;
+    this.storage.close();
   }
 
   /**
@@ -294,9 +265,9 @@ export class NodeStorage {
    * @template T - The type of the value to be stored.
    * @param {NodeStorageKey} key - The key under which the value is stored.
    * @param {T} value - The value to store.
-   * @returns {Promise<NodePersist.WriteFileResult>} A promise that resolves with the result of writing the file.
+   * @returns {Promise<WriteFileResult>} A promise that resolves with the database file and the written datum.
    */
-  async set<T = unknown>(key: NodeStorageKey, value: T): Promise<NodePersist.WriteFileResult> {
+  async set<T = unknown>(key: NodeStorageKey, value: T): Promise<WriteFileResult> {
     return this.storage.setItem(key, value);
   }
 
@@ -326,8 +297,7 @@ export class NodeStorage {
    * @returns {Promise<boolean>} A promise that resolves with true if the key exists, otherwise false.
    */
   async has(key: NodeStorageKey): Promise<boolean> {
-    const keys = await this.storage.keys();
-    return keys.includes(key);
+    return this.storage.has(key);
   }
 
   /**
@@ -353,9 +323,9 @@ export class NodeStorage {
    * Removes a value for a given key from the storage.
    *
    * @param {NodeStorageKey} key - The key of the value to remove.
-   * @returns {Promise<NodePersist.DeleteFileResult>} A promise that resolves with the result of deleting the file.
+   * @returns {Promise<DeleteFileResult>} A promise that resolves with the database file and whether the key existed.
    */
-  async remove(key: NodeStorageKey): Promise<NodePersist.DeleteFileResult> {
+  async remove(key: NodeStorageKey): Promise<DeleteFileResult> {
     return this.storage.removeItem(key);
   }
 
@@ -368,7 +338,7 @@ export class NodeStorage {
     const map = new Map<NodeStorageKey, NodeStorageValue>();
     const data = await this.storage.data();
     for (const datum of data) {
-      map.set(datum.key, datum.value as NodeStorageValue);
+      map.set(datum.key, datum.value);
     }
     return Object.fromEntries(map);
   }
@@ -419,7 +389,7 @@ export class NodeStorage {
     console.log(`This NodeStorage has ${(await this.storage.length()).toString()} keys:`);
     const keys = await this.storage.keys();
     for (const key of keys) {
-      console.log(`- ${key}: ${await this.storage.get(key)}`);
+      console.log(`- ${key}: ${String(await this.storage.getItem(key))}`);
     }
     return this.storage.length();
   }

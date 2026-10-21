@@ -13,7 +13,7 @@
 
 ---
 
-NodeStorage is a lightweight, file-based storage management system for Node.js, built on top of `node-persist`. It allows for easy and intuitive handling of persistent key-value storage directly within your Node.js applications. This system is ideal for small to medium-sized projects requiring simple data persistence without the overhead of a database system.
+NodeStorage is a lightweight storage management system for Node.js and Bun, built on top of the SQLite embedded in the runtime: `node:sqlite` on Node.js and `bun:sqlite` on Bun. It allows for easy and intuitive handling of persistent key-value storage directly within your applications, with no dependencies. This system is ideal for small to medium-sized projects requiring simple data persistence without the overhead of a database server.
 
 If you like this project and find it useful, please consider giving it a star on [GitHub](https://github.com/Luligu/node-persist-manager) and sponsoring it.
 
@@ -25,14 +25,16 @@ If you like this project and find it useful, please consider giving it a star on
 - Asynchronous data handling.
 - Customizable storage directories for isolated storage contexts.
 - Built-in logging capabilities for monitoring storage initialization and operations.
-- Comprehensive test suite using Jest to ensure reliability and performance.
+- No dependencies: uses `node:sqlite` on Node.js and `bun:sqlite` on Bun.
+- Automatic import of the data stored by the previous `node-persist` based versions.
+- Comprehensive test suite using Vitest to ensure reliability and performance.
 - Detailed documentation with JSDoc for better developer experience.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js installed on your machine.
+- Node.js 22.13 or later (or Bun) installed on your machine.
 - Basic knowledge of TypeScript and Node.js.
 
 ### Installation
@@ -105,6 +107,26 @@ await myStorage.remove('myKey');
 ```typescript
 await myStorage.clear();
 ```
+
+## Storage format
+
+Each storage is a SQLite database named `storage.sqlite`, created in its own directory:
+
+- the NodeStorageManager database is in `dir` (default `node_storage` in the current working directory);
+- each NodeStorage database is in `dir/.<storageName>`.
+
+The databases use the WAL journal with synchronous `NORMAL`, the recommended settings for performance: a power loss can lose the last writes but never corrupts the database. `keys()`, `values()` and `data()` return the items in insertion order.
+
+### Migration from node-persist
+
+When a database is created, the files stored by `node-persist` (previous versions of this package) in the same directory are imported automatically. The `node-persist` files are left in place, so you can downgrade if needed, and they are not imported again.
+
+### Options
+
+The constructor accepts the same options of `node-persist`:
+
+- `dir`, `logging`, `ttl`, `expiredInterval`, `stringify`, `parse` and `forgiveParseErrors` are supported;
+- `writeQueue`, `writeQueueIntervalMs`, `writeQueueWriteOnlyLast` and `encoding` are accepted and ignored: SQLite writes are immediate and always utf8.
 
 # API Reference
 
@@ -210,4 +232,4 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 # Acknowledgments
 
-Thanks to node-persist for providing the underlying storage mechanism.
+Thanks to node-persist for providing the storage mechanism of the previous versions.

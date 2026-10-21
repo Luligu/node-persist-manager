@@ -174,41 +174,71 @@ describe('NodeStorageManager with NodeStorage', () => {
     expect(await storageManager.healthCheck()).toBeFalsy();
   });
 
-  it('should not start writeInterval with writeQueue = false', async () => {
+  it('should ignore writeQueue = false', async () => {
     await fsPromises.rm(customDir1, { recursive: true, force: true });
     const customOptions = { dir: customDir1, writeQueue: false, expiredInterval: void 0 };
     storageManager = new NodeStorageManager(customOptions);
     storage = await storageManager.createStorage('testStorage');
-    expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();
-    expect((storageManager as any).storage._writeQueueInterval).toBeUndefined();
-    expect((storage as any).storage._expiredKeysInterval).toBeUndefined();
-    expect((storage as any).storage._writeQueueInterval).toBeUndefined();
+    expect((storageManager as any).storage.expiredKeysInterval).toBeUndefined();
+    expect((storage as any).storage.expiredKeysInterval).toBeUndefined();
 
     await storage.set('key', 'Abc');
-    expect(await (storage as any).storage.length()).toEqual(1);
+    expect(await storage.size()).toEqual(1);
     await storage.clear();
-    expect(await (storage as any).storage.length()).toEqual(0);
+    expect(await storage.size()).toEqual(0);
 
     await storage.close();
     await storageManager.close();
   });
 
-  it('should start writeInterval with writeQueue = true', async () => {
+  it('should ignore writeQueue = true', async () => {
     await fsPromises.rm(customDir2, { recursive: true, force: true });
     const customOptions = { dir: customDir2, writeQueue: true, expiredInterval: void 0 };
     storageManager = new NodeStorageManager(customOptions);
     storage = await storageManager.createStorage('testStorage');
-    expect((storageManager as any).storage._expiredKeysInterval).toBeUndefined();
-    expect((storageManager as any).storage._writeQueueInterval).toBeDefined();
-    expect((storage as any).storage._expiredKeysInterval).toBeUndefined();
-    expect((storage as any).storage._writeQueueInterval).toBeDefined();
+    expect((storageManager as any).storage.expiredKeysInterval).toBeUndefined();
+    expect((storage as any).storage.expiredKeysInterval).toBeUndefined();
 
     await storage.set('key', 'Abc');
-    expect(await (storage as any).storage.length()).toEqual(1);
+    expect(await storage.size()).toEqual(1);
     await storage.clear();
-    expect(await (storage as any).storage.length()).toEqual(0);
+    expect(await storage.size()).toEqual(0);
 
     await storage.close();
+    await storageManager.close();
+  });
+
+  it('should reopen the storage when used after close', async () => {
+    storage = await storageManager.createStorage('testStorage');
+    await storage.set('key', 'Abc');
+    await storage.close();
+    await storageManager.close();
+    expect((storage as any).storage.database).toBeUndefined();
+    expect(await storage.get('key')).toEqual('Abc');
+    expect(await storageManager.getStorageNames()).toEqual(['testStorage']);
+    await storage.close();
+    await storageManager.close();
+  });
+
+  it('should close the open storages when removing a storage', async () => {
+    storage = await storageManager.createStorage('testStorage');
+    const otherStorage = await storageManager.createStorage('testStorage');
+    await storage.set('key', 'Abc');
+    expect(await otherStorage.get('key')).toEqual('Abc');
+    expect(await storageManager.removeStorage('testStorage')).toBe(true);
+    expect((storage as any).storage.database).toBeUndefined();
+    expect((otherStorage as any).storage.database).toBeUndefined();
+    expect(await storageManager.getStorageNames()).toEqual([]);
+    await storageManager.close();
+  });
+
+  it('should forget the storages that have been garbage collected', async () => {
+    await storageManager.createStorage('testStorage');
+    const derefSpy = vi.spyOn(WeakRef.prototype, 'deref').mockImplementation(() => {});
+    await storageManager.createStorage('testStorage');
+    expect((storageManager as any).openStorages.get('testStorage').size).toBe(1);
+    expect(await storageManager.removeStorage('testStorage')).toBe(true);
+    derefSpy.mockRestore();
     await storageManager.close();
   });
 });

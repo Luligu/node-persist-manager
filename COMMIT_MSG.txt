@@ -1,0 +1,17 @@
+feat(storage): replace node-persist with node:sqlite and bun:sqlite
+
+Each storage is now a SQLite database (storage.sqlite) in its directory,
+opened with node:sqlite on Node.js and bun:sqlite on Bun, using the WAL
+journal with synchronous NORMAL. The public API of NodeStorageManager and
+NodeStorage is unchanged.
+
+- Import the existing node-persist files when a database is created.
+- Support the dir, logging, ttl, expiredInterval, stringify, parse and
+  forgiveParseErrors options; accept and ignore the write queue options.
+- Export InitOptions, WriteFileResult and DeleteFileResult types
+  compatible with node-persist.
+- Require Node.js 22.13 or later (node:sqlite is not available on 20).
+- Remove the node-persist and @types/node-persist dependencies.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01C7w4WZwF1vSx9kmWCkLCBU
