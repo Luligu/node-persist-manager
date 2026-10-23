@@ -25,12 +25,14 @@ If you like this project and find it useful, please consider giving it a star on
 
 ### Added
 
+- [storage]: Add default BigInt JSON serialization with reserved-prefix string escaping.
 - [devcontainer]: Add [`Dev Container`](.devcontainer/README.md) v.2.2.0 with dual Node and Bun runtime support.
 - [agents]: Add a [`shared setup`](.agents/README.md) for all agents: OpenAI Codex, Claude Code, GitHub Copilot and Google Gemini / Antigravity.
 - [agents]: Add [`commit message instructions`](.github/commit-message-instructions.md) v.1.0.0 for the VS Code Copilot "Generate Commit Message" button (Conventional Commits).
 
 ### Changed
 
+- [healthCheck]: Use BigInt-aware serialization for invalid-data diagnostics.
 - [vscode]: Update `.vscode/settings.json` to v.1.0.16.
 - [config]: Update Oxlint and Oxfmt configurations to v.1.2.0 and Antigravity settings to v.1.0.6.
 - [styleguide]: Update [`STYLEGUIDE.md`](STYLEGUIDE.md) to v.1.1.0: align it with the lint and format config and add the Commit Messages and Changelog sections.

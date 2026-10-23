@@ -132,6 +132,50 @@ describe('NodeStorageManager with NodeStorage', () => {
     expect(typeof returnItem).toEqual('object');
   });
 
+  it('should return a complex object when keys and values have different shapes', async () => {
+    const item = {
+      0: 'zero',
+      123: { label: 'numeric key', value: 123 },
+      '': 'empty key',
+      'key with spaces': 'value with spaces',
+      'key.with.dots': { 'nested-key': 'nested value' },
+      'key/with/slashes': 'path-like key',
+      '日本語🔑': 'Café, 日本語, and 🚀',
+      'text': 'Quotes: "hello", backslash: \\, newline:\nsecond line\tindented',
+      'numbers': {
+        zero: 0,
+        negative: -42,
+        fractional: 0.125,
+        small: 1e-10,
+        large: Number.MAX_SAFE_INTEGER,
+      },
+      'flags': { enabled: true, disabled: false },
+      'emptyValues': { text: '', list: [], object: {}, nullable: null },
+      'mixedValues': ['text', 42, false, null, { nested: ['first', 2, true] }, []],
+      'matrix': [[1, 2, 3], [4, 5, 6], []],
+      'devices': [
+        {
+          id: 'sensor-1',
+          name: 'Living room',
+          readings: [{ temperature: 21.5, humidity: 48, isValid: true }],
+          metadata: { tags: ['indoor', 'climate'], location: { floor: 0, room: 'living room' } },
+        },
+        {
+          id: 'sensor-2',
+          name: 'Garden',
+          readings: [{ temperature: -3.25, humidity: 82, isValid: false }],
+          metadata: { tags: ['outdoor'], location: { floor: -1, room: null } },
+        },
+      ],
+      'nested': { level1: { level2: { level3: { values: [null, false, 0, ''], leaf: 'deep value' } } } },
+    };
+
+    await storage.set<typeof item>('objectKey', item);
+    const returnItem = await storage.get<typeof item>('objectKey');
+
+    expect(returnItem).toStrictEqual(item);
+  });
+
   it('should return an interface', async () => {
     const item: DatumTest = { key: 'abc', value: 234 };
     await storage.set<DatumTest>('objectKey', item);

@@ -94,6 +94,40 @@ const value = await myStorage.get('myKey');
 console.log(value); // Outputs: 'myValue'
 ```
 
+## BigInt values:
+
+BigInts are supported by default, including nested objects and arrays:
+
+```typescript
+await myStorage.set('counter', 9007199254740993n);
+const counter = await myStorage.get<bigint>('counter');
+```
+
+The default serialization callbacks use `__node_persist__:bigint:<digits>` strings to preserve BigInt precision. Literal strings starting with `__node_persist__:` are escaped with `__node_persist__:string:` and restored on read.
+
+Custom `stringify` and `parse` callbacks must be provided together through `NodeStorageManager` options and use compatible encodings. Providing only one throws a `TypeError`. When both are omitted or undefined, the default pair is used. To use standard JSON behavior, pass `{ stringify: JSON.stringify, parse: JSON.parse }`.
+
+Existing JSON files remain readable, but old literal strings matching the reserved BigInt or string markers are interpreted by the new parser.
+
+> [!WARNING]
+> **Downgrade risk:** Versions without this serializer read stored BigInts as prefixed strings and leave escaped strings encoded. Applications expecting BigInts or the original strings may fail or behave incorrectly. Back up your storage before upgrading; before downgrading, restore a compatible backup or migrate the data to a format the older version supports.
+
+## Circular references:
+
+> [!WARNING]
+> Circular references are not supported by the default serializer. `storage.set()` rejects with a `TypeError` before writing the value. Await the operation and handle the rejection to avoid an unhandled promise rejection.
+
+```typescript
+const circular: { self?: unknown } = {};
+circular.self = circular;
+
+try {
+  await myStorage.set('circular', circular);
+} catch (error) {
+  console.error('Unable to store circular data:', error);
+}
+```
+
 ## Remove a value:
 
 ```typescript
