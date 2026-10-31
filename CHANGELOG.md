@@ -33,17 +33,25 @@ If you like this project and find it useful, please consider giving it a star on
 ### Changed
 
 - [healthCheck]: Use BigInt-aware serialization for invalid-data diagnostics.
-- [vscode]: Update `.vscode/settings.json` to v.1.0.16.
+- [vscode]: Update `.vscode/settings.json` to v.1.0.17.
 - [config]: Update Oxlint and Oxfmt configurations to v.1.2.0 and Antigravity settings to v.1.0.6.
 - [styleguide]: Update [`STYLEGUIDE.md`](STYLEGUIDE.md) to v.1.1.0: align it with the lint and format config and add the Commit Messages and Changelog sections.
 - [scripts]: Update scripts to v.2.0.0.
 - [package]: Upgrade package.
-- [package]: Bump `oxfmt` to v.0.74.0.
-- [package]: Bump `oxlint` to v.1.89.0.
+- [package]: Bump `oxfmt` to v.0.75.0.
+- [package]: Bump `oxlint` to v.1.90.0.
 - [package]: Bump `oxlint-tsgolint` to v.7.0.2004.
 - [package]: Bump `vitest` to v.5.0.5.
 - [package]: Bump `@vitest/coverage-v8` to v.5.0.5.
-- [package]: Bump `@types/node` to v.26.6.5.
+- [package]: Bump `@types/node` to v.26.6.6.
+- [agents]: Update `.github/commit-message-instructions.md` to v.1.0.1.
+- [vscode]: Update `.vscode/tasks.json`.
+- [agents]: Update `AGENTS.md` to v.1.0.8.
+- [config]: Update `CODE_OF_CONDUCT.md` to v.1.0.0.
+- [config]: Update `CONTRIBUTING.md` to v.1.0.1.
+- [scripts]: Update `scripts/downloads.mjs`.
+- [config]: Add `SHARED-AGENTS.md`.
+- [config]: Add `TOOLCHAIN.md` v.1.0.1.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
