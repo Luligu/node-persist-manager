@@ -47,7 +47,6 @@
     "library": true,
     "jest": false,
     "vitest": true,
-    "native": true,
     "git": false,
     "version": false,
     "publish": false,
