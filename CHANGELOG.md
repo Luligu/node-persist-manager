@@ -23,7 +23,7 @@ If you like this project and find it useful, please consider giving it a star on
 
 ---
 
-## [2.1.2] - Dev branch
+## [2.1.2] - 2026-11-13
 
 ### Added
 
