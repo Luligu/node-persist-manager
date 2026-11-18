@@ -21,17 +21,15 @@ If you like this project and find it useful, please consider giving it a star on
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="120"></a>
 
-## [2.1.2] - Dev branch
+---
+
+## [2.1.3] - Dev branch
 
 ### Added
 
 - [storage]: Each storage is a SQLite database `storage.sqlite` in its directory, using the WAL journal with synchronous `NORMAL`.
 - [storage]: Import the existing `node-persist` files when the database is created. The `node-persist` files are left in place.
 - [storage]: Export the `InitOptions`, `WriteFileResult` and `DeleteFileResult` types, compatible with the `node-persist` ones.
-
-- [devcontainer]: Add [`Dev Container`](.devcontainer/README.md) v.2.2.0 with dual Node and Bun runtime support.
-- [agents]: Add a [`shared setup`](.agents/README.md) for all agents: OpenAI Codex, Claude Code, GitHub Copilot and Google Gemini / Antigravity.
-- [agents]: Add [`commit message instructions`](.github/commit-message-instructions.md) v.1.0.0 for the VS Code Copilot "Generate Commit Message" button (Conventional Commits).
 
 ### Changed
 
@@ -41,21 +39,69 @@ If you like this project and find it useful, please consider giving it a star on
 - [storage]: `close()` closes the database; the database is reopened if the storage is used again.
 - [storage]: `removeStorage()` closes the databases of the open `NodeStorage` instances before removing the directory.
 - [storage]: The `writeQueue`, `writeQueueIntervalMs`, `writeQueueWriteOnlyLast` and `encoding` options are accepted and ignored.
-- [vscode]: Update `.vscode/settings.json` to v.1.0.16.
-- [config]: Update Oxlint and Oxfmt configurations to v.1.2.0 and Antigravity settings to v.1.0.6.
-- [styleguide]: Update [`STYLEGUIDE.md`](STYLEGUIDE.md) to v.1.1.0: align it with the lint and format config and add the Commit Messages and Changelog sections.
-- [scripts]: Update scripts to v.2.0.0.
-- [package]: Upgrade package.
-- [package]: Bump `oxfmt` to v.0.74.0.
-- [package]: Bump `oxlint` to v.1.89.0.
-- [package]: Bump `oxlint-tsgolint` to v.7.0.2004.
-- [package]: Bump `vitest` to v.5.0.5.
-- [package]: Bump `@vitest/coverage-v8` to v.5.0.5.
-- [package]: Bump `@types/node` to v.26.6.5.
+- [package]: Bump `@vitest/coverage-v8` to v.5.1.1.
+- [package]: Bump `oxfmt` to v.0.79.0.
+- [package]: Bump `oxlint` to v.1.94.0.
+- [package]: Bump `oxlint-tsgolint` to v.7.0.2007.
+- [package]: Bump `vitest` to v.5.1.1.
+- [agents]: Update `.agents/README.md` to v.1.0.6.
+- [agents]: Update `.agents/rules/testing.instructions.md`, `.claude/rules/testing/testing.instructions.md` and `.github/instructions/testing/testing.instructions.md` to v.1.0.8.
+- [agents]: Update `.agents/skills/verify-agent-context/SKILL.md`, `.claude/skills/verify-agent-context/SKILL.md` and `.github/skills/verify-agent-context/SKILL.md` to v.1.0.6.
+- [agents]: Update `.antigravity/settings.json` to v.1.0.6.
+- [agents]: Update `.claude/settings.json` to v.1.0.12.
+- [codex]: Update `.codex/config.toml` to v.1.0.8.
+- [codex]: Update `.codex/rules/default.rules` to v.1.0.8.
+- [workflows]: Update `.github/workflows/build.yml` to v.2.0.6.
+- [workflows]: Update `.github/workflows/codecov.yml` to v.2.0.5.
+- [workflows]: Update `.github/workflows/codeql.yml` to v.2.0.0.
+- [workflows]: Update `.github/workflows/publish.yml` to v.2.0.5.
+- [config]: Update `.gitignore` to v.1.0.5.
+- [config]: Update `.oxfmtrc.json` to v.1.2.0.
+- [config]: Update `.oxlintrc.json` to v.1.2.0.
+- [vscode]: Update `.vscode/extensions.json` to v.1.0.6.
+- [vscode]: Update `.vscode/settings.json` to v.1.0.21.
+- [agents]: Update `AGENTS.md` to v.1.0.12.
+- [config]: Update `SHARED-AGENTS.md` to v.1.0.0.
+- [styleguide]: Update `STYLEGUIDE.md` to v.1.1.1.
+- [config]: Update `vitest.config.ts` to v.2.0.9.
 
 ### Removed
 
 - [package]: Remove the `node-persist` dependency and the `@types/node-persist` dev dependency.
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
+
+## [2.1.2] - 2026-11-13
+
+### Added
+
+- [storage]: Add default BigInt JSON serialization with reserved-prefix string escaping.
+- [devcontainer]: Add [`Dev Container`](.devcontainer/README.md) v.2.2.0 with dual Node and Bun runtime support.
+- [agents]: Add a [`shared setup`](.agents/README.md) for all agents: OpenAI Codex, Claude Code, GitHub Copilot and Google Gemini / Antigravity.
+- [agents]: Add [`commit message instructions`](.github/commit-message-instructions.md) v.1.0.0 for the VS Code Copilot "Generate Commit Message" button (Conventional Commits).
+
+### Changed
+
+- [healthCheck]: Use BigInt-aware serialization for invalid-data diagnostics.
+- [vscode]: Update `.vscode/settings.json` to v.1.0.17.
+- [config]: Update Oxlint and Oxfmt configurations to v.1.2.0 and Antigravity settings to v.1.0.6.
+- [styleguide]: Update [`STYLEGUIDE.md`](STYLEGUIDE.md) to v.1.1.0: align it with the lint and format config and add the Commit Messages and Changelog sections.
+- [scripts]: Update scripts to v.2.0.0.
+- [package]: Upgrade package.
+- [package]: Bump `oxfmt` to v.0.75.0.
+- [package]: Bump `oxlint` to v.1.90.0.
+- [package]: Bump `oxlint-tsgolint` to v.7.0.2004.
+- [package]: Bump `vitest` to v.5.0.5.
+- [package]: Bump `@vitest/coverage-v8` to v.5.0.5.
+- [package]: Bump `@types/node` to v.26.6.6.
+- [agents]: Update `.github/commit-message-instructions.md` to v.1.0.1.
+- [vscode]: Update `.vscode/tasks.json`.
+- [agents]: Update `AGENTS.md` to v.1.0.8.
+- [config]: Update `CODE_OF_CONDUCT.md` to v.1.0.0.
+- [config]: Update `CONTRIBUTING.md` to v.1.0.1.
+- [scripts]: Update `scripts/downloads.mjs`.
+- [config]: Add `SHARED-AGENTS.md`.
+- [config]: Add `TOOLCHAIN.md` v.1.0.1.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 

@@ -96,6 +96,40 @@ const value = await myStorage.get('myKey');
 console.log(value); // Outputs: 'myValue'
 ```
 
+## BigInt values:
+
+BigInts are supported by default, including nested objects and arrays:
+
+```typescript
+await myStorage.set('counter', 9007199254740993n);
+const counter = await myStorage.get<bigint>('counter');
+```
+
+The default serialization callbacks use `__node_persist__:bigint:<digits>` strings to preserve BigInt precision. Literal strings starting with `__node_persist__:` are escaped with `__node_persist__:string:` and restored on read.
+
+Custom `stringify` and `parse` callbacks must be provided together through `NodeStorageManager` options and use compatible encodings. Providing only one throws a `TypeError`. When both are omitted or undefined, the default pair is used. To use standard JSON behavior, pass `{ stringify: JSON.stringify, parse: JSON.parse }`.
+
+Existing JSON files remain readable, but old literal strings matching the reserved BigInt or string markers are interpreted by the new parser.
+
+> [!WARNING]
+> **Downgrade risk:** Versions without this serializer read stored BigInts as prefixed strings and leave escaped strings encoded. Applications expecting BigInts or the original strings may fail or behave incorrectly. Back up your storage before upgrading; before downgrading, restore a compatible backup or migrate the data to a format the older version supports.
+
+## Circular references:
+
+> [!WARNING]
+> Circular references are not supported by the default serializer. `storage.set()` rejects with a `TypeError` before writing the value. Await the operation and handle the rejection to avoid an unhandled promise rejection.
+
+```typescript
+const circular: { self?: unknown } = {};
+circular.self = circular;
+
+try {
+  await myStorage.set('circular', circular);
+} catch (error) {
+  console.error('Unable to store circular data:', error);
+}
+```
+
 ## Remove a value:
 
 ```typescript
@@ -154,82 +188,50 @@ The constructor accepts the same options of `node-persist`:
 
 - async logStorage(): Promise&lt;void&gt;
 
-## Repository toolchain
-
-> **Note:** This repository uses a new toolchain. It replaces the traditional TypeScript / ESLint / Prettier / Jest stack with a faster and lighter setup.
-
-- **No `typescript 6.x` package** — replaced by [TypeScript Native 7.x](https://github.com/microsoft/typescript-go).
-- **No ESLint, no Prettier** — replaced by the [oxc](https://oxc.rs) stack: [oxlint](https://oxc.rs/docs/guide/usage/linter.html) for linting and [oxfmt](https://oxc.rs/docs/guide/usage/formatter.html) for formatting.
-- **No Jest** — replaced by [Vitest](https://vitest.dev), which is much faster and natively supports ESM without extra configuration.
-- **Far fewer development dependencies** — the number of installed packages drops from **~600** to **~75**. A clean install is much faster.
-- **Much faster linting and formatting** — oxlint and oxfmt run in a fraction of the time required by the ESLint / Prettier pipeline.
-- **Much faster builds** — tsgo compiles the project in a fraction of the time required by the standard `tsc` build.
-- **Editor support** — use the VS Code extensions for tsgo and oxc to get the same experience in the editor.
-
-## Shared agent instructions
-
-All coding agents read the same guidance. [AGENTS.md](./AGENTS.md) and [.agents/](./.agents/) are the **single source of truth**; everything under `.github/`, `.claude/`, `.codex/` and `.antigravity/` are pointers and mirrors. Edit `.agents/` (or `AGENTS.md`), never the copies. See [.agents/README.md](./.agents/README.md) for the full layout.
-
-| File                                           | Notes                                                                                                        |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `AGENTS.md`                                    | Main project instructions — shared by every agent                                                            |
-| `.agents/README.md`                            | Layout and versioning of the shared instructions                                                             |
-| `.agents/rules/testing.instructions.md`        | Testing standards for unit tests                                                                             |
-| `.agents/skills/verify-agent-context/SKILL.md` | Verify the agent loaded this context — `$verify-agent-context` (Codex), `/verify-agent-context` (all others) |
-
-Content lives only in `.agents/`. The per-agent folders exist because each tool discovers rules and skills from its own hardcoded location, so they hold stubs that point back here — except where the tool reads `.agents/` natively.
-
-| Tool                               | Instructions                                    | Rules                                                 | Skills                                              |
-| ---------------------------------- | ----------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------- |
-| Codex                              | `AGENTS.md` — read natively                     | `.agents/rules/` — linked from `AGENTS.md`, on demand | `.agents/skills/` — native, `$verify-agent-context` |
-| Copilot (VS Code and coding agent) | `.github/copilot-instructions.md` → `AGENTS.md` | stubs in `.github/instructions/` — `applyTo` globs    | stub in `.github/skills/` — `/verify-agent-context` |
-| Claude Code                        | `CLAUDE.md` imports `AGENTS.md`                 | stubs in `.claude/rules/` — `paths` globs             | stub in `.claude/skills/` — `/verify-agent-context` |
-| Gemini / Antigravity               | `GEMINI.md` imports `AGENTS.md`                 | `.agents/rules/` — on demand                          | `.agents/skills/` — native, `/verify-agent-context` |
-
-### Copilot instructions
-
-| File                                                   | Notes                                        |
-| ------------------------------------------------------ | -------------------------------------------- |
-| `.github/copilot-instructions.md`                      | Pointer to AGENTS.md — always loaded         |
-| `.github/instructions/testing/testing.instructions.md` | Testing standards — scoped to `**/*.test.ts` |
-| `.github/skills/verify-agent-context/SKILL.md`         | Skill invocable as `/verify-agent-context`   |
-
-### Claude instructions
-
-| File                                            | Notes                                         |
-| ----------------------------------------------- | --------------------------------------------- |
-| `CLAUDE.md`                                     | Pointer to AGENTS.md — always loaded          |
-| `.claude/settings.json`                         | Claude permissions: allow, ask and deny rules |
-| `.claude/rules/testing/testing.instructions.md` | Testing standards — scoped to `**/*.test.ts`  |
-| `.claude/skills/verify-agent-context/SKILL.md`  | Skill invocable as `/verify-agent-context`    |
-
-### Codex instructions
-
-| File                         | Notes                                                             |
-| ---------------------------- | ----------------------------------------------------------------- |
-| `AGENTS.md`                  | Main project instructions — read directly, no pointer file needed |
-| `.codex/config.toml`         | Codex project permissions, approvals, and profile                 |
-| `.codex/rules/default.rules` | Codex command allow, prompt, and deny rules                       |
-
-Codex reads the shared rules and skills from `.agents/` directly; the skill is invoked as `$verify-agent-context`.
-
-### Gemini / Antigravity instructions
-
-| File                         | Notes                                                 |
-| ---------------------------- | ----------------------------------------------------- |
-| `GEMINI.md`                  | Pointer to AGENTS.md — always loaded                  |
-| `.antigravity/settings.json` | Sandboxing and permissions: allow, ask and deny rules |
-
-The shared rules under `.agents/rules/` apply on demand for the relevant tasks, and `.agents/skills/` is discovered automatically as `/verify-agent-context`.
-
-# Contributing
-
-Contributions to NodeStorage are welcome.
-
-# License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 # Acknowledgments
 
 Thanks to node-persist for providing the storage mechanism of the previous versions.
+
+## Development guide
+
+Refer to the Matterbridge [Development guide](https://matterbridge.io/README-DEV.html) for other guidelines.
+
+## Repository toolchain
+
+See [TOOLCHAIN.md](./TOOLCHAIN.md) for compilers, linting, formatting, testing, and editor support.
+
+## Shared agent instructions
+
+See [SHARED-AGENTS.md](./SHARED-AGENTS.md) for shared guidance, rules, skills, and configuration for coding agents.
+
+See [.agents/README.md](./.agents/README.md) for the shared instructions layout and versioning.
+
+## Shared dev container support
+
+See [.devcontainer/README.md](./.devcontainer/README.md) for the shared development container setup and usage.
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines.
+
+## Style guide
+
+See [STYLEGUIDE.md](./STYLEGUIDE.md) for code style, naming, documentation, and testing conventions.
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for release history and notable changes.
+
+## Issues and feature requests
+
+Report bugs and suggest improvements on [GitHub Issues](https://github.com/Luligu/node-persist-manager/issues).
+
+## License
+
+Licensed under the [Apache License 2.0](./LICENSE).
+
+## Support the project
+
+If you find this project useful, please consider giving it a star on [GitHub](https://github.com/Luligu/node-persist-manager) and sponsoring it. Your support helps maintain and improve the project.
+
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/yellow_img.png)](https://www.buymeacoffee.com/luligugithub)

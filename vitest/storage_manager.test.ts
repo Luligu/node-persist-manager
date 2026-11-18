@@ -144,6 +144,12 @@ describe('NodeStorageManager with NodeStorage', () => {
 
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed for invalid data: {}');
     expect(consoleErrorSpy).toHaveBeenCalledWith('Health check failed:', expect.any(Error));
+
+    consoleErrorSpy.mockClear();
+    const managedStorage = storageManager as unknown as { storage: { data(): Promise<unknown[]> } };
+    vi.spyOn(managedStorage.storage, 'data').mockResolvedValueOnce([{ value: 123n }]);
+    expect(await storageManager.healthCheck()).toBe(false);
+    expect(consoleErrorSpy).toHaveBeenCalledExactlyOnceWith('Health check failed for invalid data: {"value":"__node_persist__:bigint:123"}');
     (storageManager as any).storage.options.logging = false;
   });
 

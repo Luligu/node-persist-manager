@@ -27,6 +27,7 @@
 import { rm } from 'node:fs/promises';
 import path from 'node:path';
 
+import { parse, stringify } from './replacer.js';
 import { type DeleteFileResult, type InitOptions, SqliteStorage, type WriteFileResult } from './sqliteStorage.js';
 
 export type { DeleteFileResult, InitOptions, WriteFileResult } from './sqliteStorage.js';
@@ -43,7 +44,7 @@ async function performHealthCheck(storage: SqliteStorage): Promise<boolean> {
     const data = await storage.data();
     for (const datum of data) {
       if (!datum || typeof datum.key !== 'string') {
-        if (storage.options.logging) console.error(`Health check failed for invalid data: ${JSON.stringify(datum)}`);
+        if (storage.options.logging) console.error(`Health check failed for invalid data: ${stringify(datum)}`);
         return false; // Ensure datum is valid
       }
       await storage.getItem(datum.key); // Use getItem to ensure we can access the value
@@ -77,8 +78,15 @@ export class NodeStorageManager {
    * Initializes a new instance of NodeStorageManager with optional initialization options.
    *
    * @param {InitOptions} [initOptions] - Optional initialization options to customize the storage.
+   * @throws {TypeError} When only one of stringify and parse is provided.
    */
   constructor(initOptions?: InitOptions) {
+    const hasStringify = initOptions?.stringify !== undefined;
+    const hasParse = initOptions?.parse !== undefined;
+    if (hasStringify !== hasParse) {
+      throw new TypeError('stringify and parse must be provided together');
+    }
+
     // Merge initOptions with default initOptions
     this.initOptions = Object.assign(
       {
@@ -88,6 +96,7 @@ export class NodeStorageManager {
         logging: false,
       },
       initOptions,
+      { stringify: initOptions?.stringify ?? stringify, parse: initOptions?.parse ?? parse },
     );
 
     // Create and initialize a new instance of SqliteStorage
