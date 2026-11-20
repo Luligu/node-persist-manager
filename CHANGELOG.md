@@ -34,10 +34,11 @@ If you like this project and find it useful, please consider giving it a star on
 ### Changed
 
 - [storage]: Breaking: replace `node-persist` with the built-in SQLite of the runtime: `node:sqlite` on Node.js and `bun:sqlite` on Bun. The public API is unchanged.
-- [engines]: Breaking: require Node.js 22.13 or later (`node:sqlite` is not available on Node.js 20).
 - [storage]: Breaking: `keys()`, `values()` and `data()` return the items in insertion order (`node-persist` returned them in the order of the sha256 file names).
 - [storage]: `close()` closes the database; the database is reopened if the storage is used again.
-- [storage]: `removeStorage()` closes the databases of the open `NodeStorage` instances before removing the directory.
+- [storage]: `removeStorage()` closes the databases of the open `NodeStorage` instances before removing the directory; those instances then throw instead of recreating it.
+- [storage]: `NodeStorageManager.close()` also closes the databases of the `NodeStorage` instances it created.
+- [storage]: The `node-persist` files are imported once, tracked in a `metadata` table, in the same transaction that creates the database.
 - [storage]: The `writeQueue`, `writeQueueIntervalMs`, `writeQueueWriteOnlyLast` and `encoding` options are accepted and ignored.
 - [package]: Bump `@vitest/coverage-v8` to v.5.1.1.
 - [package]: Bump `oxfmt` to v.0.79.0.

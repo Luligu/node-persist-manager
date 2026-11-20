@@ -230,11 +230,40 @@ describe('NodeStorageManager with NodeStorage', () => {
     storage = await storageManager.createStorage('testStorage');
     const otherStorage = await storageManager.createStorage('testStorage');
     await storage.set('key', 'Abc');
+    await storageManager.close();
+    await otherStorage.set('otherKey', 'Def');
     expect(await otherStorage.get('key')).toEqual('Abc');
     expect(await storageManager.removeStorage('testStorage')).toBe(true);
     expect((storage as any).storage.database).toBeUndefined();
     expect((otherStorage as any).storage.database).toBeUndefined();
     expect(await storageManager.getStorageNames()).toEqual([]);
+    await storageManager.close();
+  });
+
+  it('should not recreate a removed storage when an old instance is used', async () => {
+    storage = await storageManager.createStorage('testStorage');
+    await storage.set('key', 'Abc');
+    expect(await storageManager.removeStorage('testStorage')).toBe(true);
+    await expect(storage.set('key2', 'Def')).rejects.toThrow('has been removed');
+    await expect(storage.get('key')).rejects.toThrow('has been removed');
+    await expect(fsPromises.access(path.join((storageManager as any).initOptions.dir, '.testStorage'))).rejects.toThrow();
+    await storage.close(); // Closing a removed storage is safe
+
+    // A new instance with the same name works again
+    const newStorage = await storageManager.createStorage('testStorage');
+    expect(await newStorage.get('key')).toBeUndefined();
+    expect(await storageManager.removeStorage('testStorage')).toBe(true);
+    await storageManager.close();
+  });
+
+  it('should keep the storages usable when the removal fails', async () => {
+    storage = await storageManager.createStorage('testStorage');
+    await storage.set('key', 'Abc');
+    await fsPromises.rm(path.join((storageManager as any).initOptions.dir, '.testStorage'), { recursive: true });
+    expect(await storageManager.removeStorage('testStorage')).toBe(false);
+    await storage.set('key2', 'Def');
+    expect(await storage.get('key2')).toEqual('Def');
+    expect(await storageManager.removeStorage('testStorage')).toBe(true);
     await storageManager.close();
   });
 

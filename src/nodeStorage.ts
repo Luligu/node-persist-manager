@@ -107,10 +107,11 @@ export class NodeStorageManager {
   }
 
   /**
-   * Closes the node storage manager by stopping the expired keys interval and closing the database.
+   * Closes the node storage manager by stopping the expired keys interval and closing the database and all open storages.
    */
   // oxlint-disable-next-line typescript/require-await
   async close(): Promise<void> {
+    this.openStorages.forEach((storages) => storages.forEach((ref) => ref.deref()?.close()));
     this.storage.close();
   }
 
@@ -144,16 +145,18 @@ export class NodeStorageManager {
    * Removes a storage by its name.
    *
    * The databases of the NodeStorage instances of this storage are closed before removing its directory.
+   * After a successful removal those instances throw on every operation instead of recreating the directory.
    *
    * @param {string} storageName - The name of the storage to remove.
    * @returns {Promise<boolean>} A promise that resolves to true if the storage was successfully removed, otherwise false.
    */
   async removeStorage(storageName: string): Promise<boolean> {
     const dir = path.join(this.initOptions.dir, '.' + storageName);
+    const openStorages = [...(this.openStorages.get(storageName) ?? [])].map((ref) => ref.deref()).filter((storage) => storage !== undefined);
     try {
-      this.openStorages.get(storageName)?.forEach((ref) => ref.deref()?.close());
-      this.openStorages.delete(storageName);
+      openStorages.forEach((storage) => storage.setRemoved(true));
       await rm(dir, { recursive: true });
+      this.openStorages.delete(storageName);
 
       // Update storageNames
       this.storageNames = ((await this.storage.getItem('storageNames')) as NodeStorageName[] | undefined) ?? [];
@@ -165,6 +168,7 @@ export class NodeStorageManager {
 
       return true;
     } catch (_err) {
+      if (this.openStorages.has(storageName)) openStorages.forEach((storage) => storage.setRemoved(false));
       return false;
     }
   }
@@ -182,7 +186,7 @@ export class NodeStorageManager {
   /**
    * Retrieves the keys of the entries in the storage.
    *
-   * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
+   * @returns {Promise<NodeStorageKey[]>} A promise that resolves with the keys of the entries in the storage.
    */
   async keys(): Promise<NodeStorageKey[]> {
     return this.storage.keys();
@@ -320,9 +324,9 @@ export class NodeStorage {
   }
 
   /**
-   * Checks if the storage includes a given key.
+   * Retrieves the number of keys in the storage.
    *
-   * @returns {Promise<boolean>} A promise that resolves with true if the key exists, otherwise false.
+   * @returns {Promise<number>} A promise that resolves with the number of keys in the storage.
    */
   async size(): Promise<number> {
     return this.storage.length();
@@ -355,7 +359,7 @@ export class NodeStorage {
   /**
    * Retrieves the keys of the entries in the storage.
    *
-   * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
+   * @returns {Promise<NodeStorageKey[]>} A promise that resolves with the keys of the entries in the storage.
    */
   async keys(): Promise<NodeStorageKey[]> {
     return this.storage.keys();

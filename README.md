@@ -151,6 +151,10 @@ Each storage is a SQLite database named `storage.sqlite`, created in its own dir
 
 The databases use the WAL journal with synchronous `NORMAL`, the recommended settings for performance: a power loss can lose the last writes but never corrupts the database. `keys()`, `values()` and `data()` return the items in insertion order.
 
+A storage closed with `close()` reopens its database when it is used again. A storage removed with `removeStorage()` throws on every operation: call `createStorage()` to create it again.
+
+Setting a key to `undefined` keeps the key without a value: `has()` returns true and `get()` returns `undefined`, not the default value, since the key exists. Use `remove()` to delete a key.
+
 ### Migration from node-persist
 
 When a database is created, the files stored by `node-persist` (previous versions of this package) in the same directory are imported automatically. The `node-persist` files are left in place, so you can downgrade if needed, and they are not imported again.
@@ -170,23 +174,47 @@ The constructor accepts the same options of `node-persist`:
 
 - async removeStorage(storageName: string): Promise&lt;boolean&gt;
 
-- async logStorage(): Promise&lt;void&gt;
-
 - async getStorageNames(): Promise&lt;NodeStorageName[]&gt;
 
-- async logStorage(): Promise&lt;void&gt;
+- async keys(): Promise&lt;NodeStorageKey[]&gt;
+
+- async values&lt;T = unknown&gt;(): Promise&lt;T[]&gt;
+
+- async get&lt;T = unknown&gt;(key: NodeStorageKey, defaultValue?: T): Promise&lt;T&gt;
+
+- async healthCheck(): Promise&lt;boolean&gt;
+
+- async logStorage(): Promise&lt;number&gt;
+
+- async close(): Promise&lt;void&gt;
 
 ## NodeStorage methods:
 
-- async set<T = any>(key: NodeStorageKey, value: T): Promise&lt;void&gt;
+- async set&lt;T = unknown&gt;(key: NodeStorageKey, value: T): Promise&lt;WriteFileResult&gt;
 
-- async get<T = any>(key: NodeStorageKey, defaultValue?: T): Promise&lt;T&gt;
+- async get&lt;T = unknown&gt;(key: NodeStorageKey, defaultValue?: T): Promise&lt;T&gt;
 
-- async remove(key: NodeStorageKey): Promise&lt;void&gt;
+- async has(key: NodeStorageKey): Promise&lt;boolean&gt;
+
+- async includes(key: NodeStorageKey): Promise&lt;boolean&gt;
+
+- async size(): Promise&lt;number&gt;
+
+- async remove(key: NodeStorageKey): Promise&lt;DeleteFileResult&gt;
+
+- async data(): Promise&lt;Record&lt;NodeStorageKey, NodeStorageValue&gt;&gt;
+
+- async keys(): Promise&lt;NodeStorageKey[]&gt;
+
+- async values&lt;T = unknown&gt;(): Promise&lt;T[]&gt;
+
+- async healthCheck(): Promise&lt;boolean&gt;
 
 - async clear(): Promise&lt;void&gt;
 
-- async logStorage(): Promise&lt;void&gt;
+- async logStorage(): Promise&lt;number&gt;
+
+- async close(): Promise&lt;void&gt;
 
 # Acknowledgments
 

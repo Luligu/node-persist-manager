@@ -11,7 +11,8 @@ import path from 'node:path';
 import { vi } from 'vitest';
 
 import { NodeStorageManager } from '../src/nodeStorage.js';
-import { SqliteStorage } from '../src/sqliteStorage.js';
+import { stringify } from '../src/replacer.js';
+import { DATABASE_FILE_NAME, openDatabase, SqliteStorage } from '../src/sqliteStorage.js';
 
 /**
  * Writes a file in the node-persist format.
@@ -84,6 +85,20 @@ describe('SqliteStorage', () => {
     storage.close();
   });
 
+  it('should return a detached copy of the serialized value', async () => {
+    const storage = new SqliteStorage({ dir: path.join(baseDir, 'write-result') });
+    const value = { nested: { count: 1 }, createdAt: new Date('2026-01-02T03:04:05.000Z') };
+    const result = await storage.setItem('key', value);
+
+    value.nested.count = 2;
+    expect(result.content).toEqual({
+      key: 'key',
+      value: { nested: { count: 1 }, createdAt: '2026-01-02T03:04:05.000Z' },
+    });
+    expect(await storage.getItem('key')).toEqual(result.content.value);
+    storage.close();
+  });
+
   it('should throw or skip the values that cannot be parsed', async () => {
     const storage = new SqliteStorage({ dir: path.join(baseDir, 'invalid') });
     await storage.setItem('key', 'value');
@@ -101,6 +116,30 @@ describe('SqliteStorage', () => {
     expect(await storage.getDatum('invalid')).toBeUndefined();
     expect(await storage.data()).toEqual([]);
     expect(await storage.keys()).toEqual(['key', 'invalid']);
+    storage.close();
+    storage.close(); // Close twice is safe
+  });
+
+  it('should fail the health check when a value cannot be parsed and forgiveParseErrors is set', async () => {
+    const manager = new NodeStorageManager({ dir: path.join(baseDir, 'health'), forgiveParseErrors: true });
+    const nodeStorage = await manager.createStorage('health');
+    await nodeStorage.set('key', 'value');
+    expect(await nodeStorage.healthCheck()).toBe(true);
+    (nodeStorage as any).storage.open().set.run('invalid', '{not json', null);
+    expect(await nodeStorage.get('invalid', 'default')).toEqual('default');
+    expect(await nodeStorage.keys()).toEqual(['key', 'invalid']);
+    expect(await nodeStorage.data()).toEqual({ key: 'value' });
+    expect(await nodeStorage.healthCheck()).toBe(false);
+    await manager.close();
+  });
+
+  it('should store undefined as a key without value', async () => {
+    const storage = new SqliteStorage({ dir: path.join(baseDir, 'undefined') });
+    const result = await storage.setItem('key', undefined);
+    expect(result.content).toEqual({ key: 'key', value: undefined });
+    expect(await storage.has('key')).toBe(true);
+    expect(await storage.getItem('key')).toBeUndefined();
+    expect(await storage.keys()).toEqual(['key']);
     storage.close();
     storage.close(); // Close twice is safe
   });
@@ -132,6 +171,7 @@ describe('SqliteStorage', () => {
     await writeLegacyFile(dir, 'ttl', JSON.stringify({ key: 'ttl', value: 1, ttl: Date.now() + 60000 }));
     await writeLegacyFile(dir, 'expired', JSON.stringify({ key: 'expired', value: 2, ttl: Date.now() - 1000 }));
     await writeLegacyFile(dir, 'undefined', JSON.stringify({ key: 'undefined' }));
+    await writeLegacyFile(dir, 'bigint', stringify({ key: 'bigint', value: { count: 9007199254740993n, prefix: '__node_persist__:raw' } }) ?? '');
     await writeLegacyFile(dir, 'null', 'null');
     await writeLegacyFile(dir, 'noKey', JSON.stringify({ value: 3 }));
     await fsPromises.writeFile(path.join(dir, 'other.txt'), JSON.stringify({ key: 'other', value: 4 }), 'utf8');
@@ -139,8 +179,9 @@ describe('SqliteStorage', () => {
 
     const storageManager = new NodeStorageManager({ dir, logging: true });
     expect(await storageManager.getStorageNames()).toEqual(['subStorage']);
-    expect((await storageManager.keys()).toSorted()).toEqual(['storageNames', 'ttl', 'undefined']);
+    expect((await storageManager.keys()).toSorted()).toEqual(['bigint', 'storageNames', 'ttl', 'undefined']);
     expect(await storageManager.get('undefined', 'default')).toBeUndefined();
+    expect(await storageManager.get('bigint')).toEqual({ count: 9007199254740993n, prefix: '__node_persist__:raw' });
     const storage = await storageManager.createStorage('subStorage');
     expect(await storage.data()).toEqual({ subKey: { a: 1 } });
 
@@ -149,6 +190,102 @@ describe('SqliteStorage', () => {
     await writeLegacyFile(path.join(dir, '.subStorage'), 'newKey', JSON.stringify({ key: 'newKey', value: 5 }));
     expect(await storage.keys()).toEqual(['subKey']);
     await storage.close();
+    await storageManager.close();
+  });
+
+  it('should retry the legacy import when database initialization fails', async () => {
+    const dir = path.join(baseDir, 'interrupted_import');
+    await fsPromises.mkdir(dir, { recursive: true });
+    await writeLegacyFile(dir, 'invalid', '{not json');
+
+    const loggingError = new Error('logging failed');
+    expect(
+      () =>
+        new SqliteStorage({
+          dir,
+          logging: (): never => {
+            throw loggingError;
+          },
+        }),
+    ).toThrow(loggingError);
+
+    await writeLegacyFile(dir, 'valid', JSON.stringify({ key: 'valid', value: 42 }));
+    const storage = new SqliteStorage({ dir });
+    expect(await storage.getItem('valid')).toEqual(42);
+    storage.close();
+  });
+
+  it('should not overwrite newer SQLite values when retrying the legacy import', async () => {
+    const dir = path.join(baseDir, 'legacy_recovery');
+    const storage = new SqliteStorage({ dir });
+    await storage.setItem('existing', 'sqlite');
+    storage.close();
+
+    const database = openDatabase(path.join(dir, DATABASE_FILE_NAME));
+    database.exec("DELETE FROM metadata WHERE key = 'legacy-import-complete'");
+    database.close();
+    await writeLegacyFile(dir, 'existing', JSON.stringify({ key: 'existing', value: 'legacy' }));
+    await writeLegacyFile(dir, 'missing', JSON.stringify({ key: 'missing', value: 'legacy' }));
+
+    const recoveredStorage = new SqliteStorage({ dir });
+    expect(await recoveredStorage.getItem('existing')).toEqual('sqlite');
+    expect(await recoveredStorage.getItem('missing')).toEqual('legacy');
+    recoveredStorage.close();
+  });
+
+  it('should convert the full Matterbridge node-persist fixture in vitest/storage to SQLite', async () => {
+    const fixtureDir = path.join(baseDir, 'matterbridge_fixture');
+    await fsPromises.cp(path.join('vitest', 'storage'), fixtureDir, { recursive: true });
+
+    const expectedStorages = [
+      'matterbridge',
+      'matterbridge-zigbee2mqtt',
+      'matterbridge-shelly',
+      'matterbridge-somfy-tahoma',
+      'matterbridge-test',
+      'matterbridge-example-accessory-platform',
+      'matterbridge-example-dynamic-platform',
+      'matterbridge-hass',
+      'matterbridge-irobot',
+      'matterbridge-security',
+      'matterbridge-host-health',
+    ];
+
+    const storageManager = new NodeStorageManager({ dir: fixtureDir });
+    expect(await storageManager.healthCheck()).toBe(true);
+    expect(await storageManager.keys()).toEqual(['storageNames']);
+    expect(await storageManager.getStorageNames()).toEqual(expectedStorages);
+
+    const mbStorage = await storageManager.createStorage('matterbridge');
+    expect(await mbStorage.healthCheck()).toBe(true);
+    expect(await mbStorage.size()).toBe(20);
+    expect(await mbStorage.get('bridgeMode')).toBe('childbridge');
+    expect(await mbStorage.get('matterport')).toBe(5540);
+    expect(await mbStorage.get('matterpasscode')).toBe(66782997);
+    expect(await mbStorage.get('matterdiscriminator')).toBe(2846);
+    expect(await mbStorage.get('mattermdnsinterface')).toBe('eth0');
+    expect(await mbStorage.get('matterbridgeUuid')).toBe('b16b8a18-44f2-46f4-aa66-c0538a70f730');
+    expect(await mbStorage.get('devices')).toEqual([]);
+    const plugins = await mbStorage.get<Array<{ name: string }>>('plugins');
+    expect(plugins).toHaveLength(7);
+    await mbStorage.close();
+
+    for (const pluginName of expectedStorages.slice(1)) {
+      const pluginStorage = await storageManager.createStorage(pluginName);
+      expect(await pluginStorage.healthCheck()).toBe(true);
+      expect(await pluginStorage.size()).toBe(6);
+      const data = await pluginStorage.data();
+      expect(data).toEqual({
+        name: pluginName,
+        type: pluginName === 'matterbridge-example-accessory-platform' ? 'AccessoryPlatform' : 'DynamicPlatform',
+        version: expect.any(String),
+        description: expect.any(String),
+        author: 'https://github.com/Luligu',
+        path: `/usr/local/lib/node_modules/${pluginName}/package.json`,
+      });
+      await pluginStorage.close();
+    }
+
     await storageManager.close();
   });
 });

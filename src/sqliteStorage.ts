@@ -26,7 +26,7 @@
 // The SQLite drivers are synchronous: the methods stay async to keep the Promise-based API of node-persist.
 /* oxlint-disable typescript/require-await */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
@@ -123,6 +123,7 @@ export const DATABASE_FILE_NAME = 'storage.sqlite';
 
 const DEFAULT_TTL = 24 * 60 * 60 * 1000; // If ttl is true, use 24 hours like node-persist
 const LEGACY_FILE_REGEX = /^[0-9a-f]{64}$/; // node-persist stores each key in a file named with the sha256 of the key
+const LEGACY_IMPORT_MARKER = 'legacy-import-complete';
 const NOT_EXPIRED = '(ttl IS NULL OR ttl > ?)';
 
 const require = createRequire(import.meta.url);
@@ -154,6 +155,7 @@ export class SqliteStorage {
   private database: SqliteDatabase | undefined;
   private statements: SqliteStatements | undefined;
   private expiredKeysInterval: NodeJS.Timeout | undefined;
+  private removed = false;
 
   /**
    * Creates the store and opens its database.
@@ -173,30 +175,57 @@ export class SqliteStorage {
    * Uses the WAL journal with synchronous NORMAL: the recommended settings for performance that never corrupt the database.
    *
    * @returns {SqliteStatements} The prepared statements of the opened database.
+   * @throws {Error} When the storage has been removed.
    */
   private open(): SqliteStatements {
     if (this.statements) return this.statements;
+    if (this.removed) throw new Error(`[node-persist-manager] the storage in ${this.dir} has been removed`);
     mkdirSync(this.dir, { recursive: true });
-    const isNew = !existsSync(this.file);
     const database = openDatabase(this.file);
-    database.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;');
-    database.exec('CREATE TABLE IF NOT EXISTS storage (key TEXT PRIMARY KEY NOT NULL, value TEXT, ttl INTEGER)');
-    this.database = database;
-    this.statements = {
-      get: database.prepare(`SELECT value, ttl FROM storage WHERE key = ? AND ${NOT_EXPIRED}`),
-      has: database.prepare(`SELECT 1 AS found FROM storage WHERE key = ? AND ${NOT_EXPIRED}`),
-      set: database.prepare('INSERT INTO storage (key, value, ttl) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, ttl = excluded.ttl'),
-      remove: database.prepare('DELETE FROM storage WHERE key = ?'),
-      all: database.prepare(`SELECT key, value, ttl FROM storage WHERE ${NOT_EXPIRED} ORDER BY rowid`),
-      keys: database.prepare(`SELECT key FROM storage WHERE ${NOT_EXPIRED} ORDER BY rowid`),
-      count: database.prepare(`SELECT COUNT(*) AS count FROM storage WHERE ${NOT_EXPIRED}`),
-      clear: database.prepare('DELETE FROM storage'),
-      removeExpired: database.prepare('DELETE FROM storage WHERE ttl IS NOT NULL AND ttl <= ?'),
-    };
-    if (isNew) this.importLegacyFiles(this.statements);
+    try {
+      database.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000;');
+      database.exec('BEGIN IMMEDIATE');
+      database.exec('CREATE TABLE IF NOT EXISTS storage (key TEXT PRIMARY KEY NOT NULL, value TEXT, ttl INTEGER)');
+      database.exec('CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY NOT NULL, value TEXT)');
+      this.database = database;
+      this.statements = {
+        get: database.prepare(`SELECT value, ttl FROM storage WHERE key = ? AND ${NOT_EXPIRED}`),
+        has: database.prepare(`SELECT 1 AS found FROM storage WHERE key = ? AND ${NOT_EXPIRED}`),
+        set: database.prepare('INSERT INTO storage (key, value, ttl) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, ttl = excluded.ttl'),
+        remove: database.prepare('DELETE FROM storage WHERE key = ?'),
+        all: database.prepare(`SELECT key, value, ttl FROM storage WHERE ${NOT_EXPIRED} ORDER BY rowid`),
+        keys: database.prepare(`SELECT key FROM storage WHERE ${NOT_EXPIRED} ORDER BY rowid`),
+        count: database.prepare(`SELECT COUNT(*) AS count FROM storage WHERE ${NOT_EXPIRED}`),
+        clear: database.prepare('DELETE FROM storage'),
+        removeExpired: database.prepare('DELETE FROM storage WHERE ttl IS NOT NULL AND ttl <= ?'),
+      };
+      const getMetadata = database.prepare('SELECT 1 AS found FROM metadata WHERE key = ?');
+      if (!getMetadata.get(LEGACY_IMPORT_MARKER)) {
+        this.importLegacyFiles(database);
+        database.prepare('INSERT INTO metadata (key, value) VALUES (?, ?)').run(LEGACY_IMPORT_MARKER, '1');
+      }
+      database.exec('COMMIT');
+    } catch (error) {
+      let cleanupError: unknown;
+      try {
+        database.exec('ROLLBACK');
+      } catch (rollbackError) {
+        cleanupError = rollbackError;
+      }
+      try {
+        database.close();
+      } catch (closeError) {
+        cleanupError = cleanupError === undefined ? closeError : new AggregateError([cleanupError, closeError], 'Failed to roll back and close the SQLite database');
+      }
+      this.database = undefined;
+      this.statements = undefined;
+      if (cleanupError !== undefined) throw new AggregateError([error, cleanupError], 'Failed to initialize the SQLite database', { cause: error });
+      throw error;
+    }
     if (typeof this.options.expiredInterval === 'number' && this.options.expiredInterval > 0) {
+      const ref = new WeakRef(this);
       this.expiredKeysInterval = setInterval(() => {
-        void this.removeExpiredItems();
+        void ref.deref()?.removeExpiredItems();
       }, this.options.expiredInterval).unref();
     }
     return this.statements;
@@ -209,21 +238,22 @@ export class SqliteStorage {
    *  - files that cannot be read or parsed, or that are not valid node-persist items, are skipped;
    *  - expired items are skipped.
    *
-   * @param {SqliteStatements} statements - The prepared statements of the new database.
+   * @param {SqliteDatabase} database - The opened SQLite database.
    * @returns {number} The number of imported items.
    */
-  private importLegacyFiles(statements: SqliteStatements): number {
+  private importLegacyFiles(database: SqliteDatabase): number {
     const now = Date.now();
+    const parse = this.options.parse ?? JSON.parse;
+    const insert = database.prepare('INSERT INTO storage (key, value, ttl) VALUES (?, ?, ?) ON CONFLICT(key) DO NOTHING');
     let imported = 0;
     for (const entry of readdirSync(this.dir, { withFileTypes: true })) {
       if (!entry.isFile() || !LEGACY_FILE_REGEX.test(entry.name)) continue;
       try {
-        const datum = JSON.parse(readFileSync(path.join(this.dir, entry.name), 'utf8')) as Partial<Datum> | null;
+        const datum = parse(readFileSync(path.join(this.dir, entry.name), 'utf8')) as Partial<Datum> | null;
         if (!datum || typeof datum.key !== 'string') continue;
         const ttl = typeof datum.ttl === 'number' ? datum.ttl : null;
         if (ttl !== null && ttl <= now) continue;
-        statements.set.run(datum.key, this.serialize(datum.value), ttl);
-        imported++;
+        if (Number(insert.run(datum.key, this.serialize(datum.value), ttl).changes) > 0) imported++;
       } catch (error) {
         this.log(`Skipped node-persist file ${entry.name}:`, error);
       }
@@ -379,9 +409,9 @@ export class SqliteStorage {
    */
   async setItem(key: string, value: unknown): Promise<WriteFileResult> {
     const text = this.serialize(value);
+    const content: Datum = { key, value: this.deserialize(key, text).value };
     const ttl = this.expiration();
     this.open().set.run(key, text, ttl);
-    const content: Datum = { key, value: this.deserialize(key, text).value };
     if (ttl !== null) content.ttl = ttl;
     return { file: this.file, content };
   }
@@ -424,5 +454,15 @@ export class SqliteStorage {
     this.statements = undefined;
     this.database?.close();
     this.database = undefined;
+  }
+
+  /**
+   * Marks the storage as removed or restores it. A removed storage is closed and throws on every operation instead of recreating its directory.
+   *
+   * @param {boolean} removed - True to mark the storage as removed, false to restore it (e.g. when the removal of its directory failed).
+   */
+  setRemoved(removed: boolean): void {
+    if (removed) this.close();
+    this.removed = removed;
   }
 }
