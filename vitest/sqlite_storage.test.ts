@@ -6,6 +6,7 @@
 
 import { createHash } from 'node:crypto';
 import fsPromises from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { vi } from 'vitest';
@@ -212,6 +213,63 @@ describe('SqliteStorage', () => {
     await writeLegacyFile(dir, 'valid', JSON.stringify({ key: 'valid', value: 42 }));
     const storage = new SqliteStorage({ dir });
     expect(await storage.getItem('valid')).toEqual(42);
+    storage.close();
+  });
+
+  it('should report the rollback and close errors when database initialization fails', async () => {
+    const dir = path.join(baseDir, 'cleanup_errors');
+    await fsPromises.mkdir(dir, { recursive: true });
+    await writeLegacyFile(dir, 'invalid', '{not json');
+    const initError = new Error('logging failed');
+    const rollbackError = new Error('rollback failed');
+    const closeError = new Error('close failed');
+    const create = (): SqliteStorage =>
+      new SqliteStorage({
+        dir,
+        logging: (): never => {
+          throw initError;
+        },
+      });
+
+    // The spies run the real methods before throwing, so the database is rolled back and closed
+    const { DatabaseSync } = createRequire(import.meta.url)('node:sqlite') as typeof import('node:sqlite');
+    const exec = DatabaseSync.prototype.exec;
+    const close = DatabaseSync.prototype.close;
+    const failRollback = (): ReturnType<typeof vi.spyOn> =>
+      vi.spyOn(DatabaseSync.prototype, 'exec').mockImplementation(function (this: InstanceType<typeof DatabaseSync>, sql: string) {
+        exec.call(this, sql);
+        if (sql === 'ROLLBACK') throw rollbackError;
+      });
+    const failClose = (): ReturnType<typeof vi.spyOn> =>
+      vi.spyOn(DatabaseSync.prototype, 'close').mockImplementation(function (this: InstanceType<typeof DatabaseSync>) {
+        close.call(this);
+        throw closeError;
+      });
+
+    // Rollback fails
+    let execSpy = failRollback();
+    expect(create).toThrow(expect.objectContaining({ message: 'Failed to initialize the SQLite database', errors: [initError, rollbackError], cause: initError }));
+    execSpy.mockRestore();
+
+    // Close fails
+    let closeSpy = failClose();
+    expect(create).toThrow(expect.objectContaining({ message: 'Failed to initialize the SQLite database', errors: [initError, closeError] }));
+    closeSpy.mockRestore();
+
+    // Both fail
+    execSpy = failRollback();
+    closeSpy = failClose();
+    expect(create).toThrow(
+      expect.objectContaining({
+        errors: [initError, expect.objectContaining({ message: 'Failed to roll back and close the SQLite database', errors: [rollbackError, closeError] })],
+      }),
+    );
+    execSpy.mockRestore();
+    closeSpy.mockRestore();
+
+    // The database is usable after the failures
+    const storage = new SqliteStorage({ dir });
+    expect(await storage.length()).toBe(0);
     storage.close();
   });
 
