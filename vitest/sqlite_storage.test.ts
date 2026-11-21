@@ -12,7 +12,7 @@ import path from 'node:path';
 import { vi } from 'vitest';
 
 import { NodeStorageManager } from '../src/nodeStorage.js';
-import { stringify } from '../src/replacer.js';
+import { parse, stringify } from '../src/replacer.js';
 import { DATABASE_FILE_NAME, openDatabase, SqliteStorage } from '../src/sqliteStorage.js';
 
 /**
@@ -25,6 +25,34 @@ import { DATABASE_FILE_NAME, openDatabase, SqliteStorage } from '../src/sqliteSt
  */
 async function writeLegacyFile(dir: string, key: string, content: string): Promise<void> {
   await fsPromises.writeFile(path.join(dir, createHash('sha256').update(key).digest('hex')), content, 'utf8');
+}
+
+/**
+ * Lists the node-persist files of a storage directory.
+ *
+ * @param {string} dir - The storage directory.
+ * @returns {Promise<string[]>} A promise that resolves with the paths of the node-persist files, sorted.
+ */
+async function legacyFiles(dir: string): Promise<string[]> {
+  return (await fsPromises.readdir(dir))
+    .filter((name) => /^[0-9a-f]{64}$/.test(name))
+    .toSorted()
+    .map((name) => path.join(dir, name));
+}
+
+/**
+ * Reads the items of a storage directory straight from its node-persist files, independently of SqliteStorage.
+ *
+ * @param {string} dir - The storage directory.
+ * @returns {Promise<Record<string, unknown>>} A promise that resolves with the values by key.
+ */
+async function readLegacyItems(dir: string): Promise<Record<string, unknown>> {
+  const items: Record<string, unknown> = {};
+  for (const file of await legacyFiles(dir)) {
+    const datum = parse(await fsPromises.readFile(file, 'utf8')) as { key: string; value: unknown };
+    items[datum.key] = datum.value;
+  }
+  return items;
 }
 
 describe('SqliteStorage', () => {
@@ -309,13 +337,42 @@ describe('SqliteStorage', () => {
       'matterbridge-host-health',
     ];
 
+    const storageDirs = [fixtureDir, ...expectedStorages.map((name) => path.join(fixtureDir, '.' + name))];
+
+    // The expected items, read straight from the node-persist files: 1 manager key, 20 matterbridge keys and 6 keys for each plugin
+    const expectedItems = new Map<string, Record<string, unknown>>();
+    const legacyContents = new Map<string, string>();
+    for (const dir of storageDirs) {
+      expectedItems.set(dir, await readLegacyItems(dir));
+      for (const file of await legacyFiles(dir)) legacyContents.set(file, await fsPromises.readFile(file, 'utf8'));
+    }
+    expect(legacyContents.size).toBe(1 + 20 + 6 * 10);
+
+    /**
+     * Checks that every storage holds exactly the items of its node-persist files.
+     *
+     * @param {NodeStorageManager} manager - The storage manager of the fixture.
+     */
+    const expectAllItemsConverted = async (manager: NodeStorageManager): Promise<void> => {
+      expect(await manager.healthCheck()).toBe(true);
+      const managerItems: Record<string, unknown> = {};
+      for (const key of await manager.keys()) managerItems[key] = await manager.get(key);
+      expect(managerItems).toStrictEqual(expectedItems.get(fixtureDir));
+      for (const name of expectedStorages) {
+        const storage = await manager.createStorage(name);
+        expect(await storage.healthCheck()).toBe(true);
+        expect(await storage.data()).toStrictEqual(expectedItems.get(path.join(fixtureDir, '.' + name)));
+        await storage.close();
+      }
+    };
+
     const storageManager = new NodeStorageManager({ dir: fixtureDir });
-    expect(await storageManager.healthCheck()).toBe(true);
+    await expectAllItemsConverted(storageManager);
     expect(await storageManager.keys()).toEqual(['storageNames']);
     expect(await storageManager.getStorageNames()).toEqual(expectedStorages);
 
+    // Spot checks of known values
     const mbStorage = await storageManager.createStorage('matterbridge');
-    expect(await mbStorage.healthCheck()).toBe(true);
     expect(await mbStorage.size()).toBe(20);
     expect(await mbStorage.get('bridgeMode')).toBe('childbridge');
     expect(await mbStorage.get('matterport')).toBe(5540);
@@ -330,10 +387,8 @@ describe('SqliteStorage', () => {
 
     for (const pluginName of expectedStorages.slice(1)) {
       const pluginStorage = await storageManager.createStorage(pluginName);
-      expect(await pluginStorage.healthCheck()).toBe(true);
       expect(await pluginStorage.size()).toBe(6);
-      const data = await pluginStorage.data();
-      expect(data).toEqual({
+      expect(await pluginStorage.data()).toEqual({
         name: pluginName,
         type: pluginName === 'matterbridge-example-accessory-platform' ? 'AccessoryPlatform' : 'DynamicPlatform',
         version: expect.any(String),
@@ -343,7 +398,21 @@ describe('SqliteStorage', () => {
       });
       await pluginStorage.close();
     }
-
     await storageManager.close();
+
+    // The node-persist files are left in place, unchanged
+    for (const [file, content] of legacyContents) expect(await fsPromises.readFile(file, 'utf8')).toBe(content);
+
+    // Reopening does not import the files again
+    const reopenedManager = new NodeStorageManager({ dir: fixtureDir });
+    await expectAllItemsConverted(reopenedManager);
+    await reopenedManager.close();
+
+    // The data lives in the SQLite databases: it survives the removal of the node-persist files
+    for (const file of legacyContents.keys()) await fsPromises.rm(file);
+    for (const dir of storageDirs) expect(await legacyFiles(dir)).toEqual([]);
+    const sqliteOnlyManager = new NodeStorageManager({ dir: fixtureDir });
+    await expectAllItemsConverted(sqliteOnlyManager);
+    await sqliteOnlyManager.close();
   });
 });
