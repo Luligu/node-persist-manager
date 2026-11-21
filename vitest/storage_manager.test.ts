@@ -259,6 +259,7 @@ describe('NodeStorageManager with NodeStorage', () => {
   it('should keep the storages usable when the removal fails', async () => {
     storage = await storageManager.createStorage('testStorage');
     await storage.set('key', 'Abc');
+    await storage.close(); // Windows cannot remove the directory of an open database
     await fsPromises.rm(path.join((storageManager as any).initOptions.dir, '.testStorage'), { recursive: true });
     expect(await storageManager.removeStorage('testStorage')).toBe(false);
     await storage.set('key2', 'Def');
@@ -268,10 +269,13 @@ describe('NodeStorageManager with NodeStorage', () => {
   });
 
   it('should forget the storages that have been garbage collected', async () => {
-    await storageManager.createStorage('testStorage');
+    const firstStorage = await storageManager.createStorage('testStorage');
     const derefSpy = vi.spyOn(WeakRef.prototype, 'deref').mockImplementation(() => {});
-    await storageManager.createStorage('testStorage');
+    const secondStorage = await storageManager.createStorage('testStorage');
     expect((storageManager as any).openStorages.get('testStorage').size).toBe(1);
+    // With deref mocked removeStorage cannot close the databases: close them, since Windows cannot remove the directory of an open database
+    await firstStorage.close();
+    await secondStorage.close();
     expect(await storageManager.removeStorage('testStorage')).toBe(true);
     derefSpy.mockRestore();
     await storageManager.close();
