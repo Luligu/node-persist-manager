@@ -148,23 +148,49 @@ await myStorage.clear();
 
 - async removeStorage(storageName: string): Promise&lt;boolean&gt;
 
-- async logStorage(): Promise&lt;void&gt;
-
 - async getStorageNames(): Promise&lt;NodeStorageName[]&gt;
 
-- async logStorage(): Promise&lt;void&gt;
+- async keys(): Promise&lt;NodeStorageKey[]&gt;
+
+- async values&lt;T = unknown&gt;(): Promise&lt;T[]&gt;
+
+- async get&lt;T = unknown&gt;(key: NodeStorageKey, defaultValue?: T): Promise&lt;T&gt;
+
+- async healthCheck(): Promise&lt;boolean&gt;
+
+- async logStorage(): Promise&lt;number&gt;
+
+- async close(): Promise&lt;void&gt;
 
 ## NodeStorage methods:
 
-- async set<T = any>(key: NodeStorageKey, value: T): Promise&lt;void&gt;
+- async set&lt;T = unknown&gt;(key: NodeStorageKey, value: T): Promise&lt;WriteFileResult&gt;
 
-- async get<T = any>(key: NodeStorageKey, defaultValue?: T): Promise&lt;T&gt;
+- async get&lt;T = unknown&gt;(key: NodeStorageKey, defaultValue?: T): Promise&lt;T&gt;
 
-- async remove(key: NodeStorageKey): Promise&lt;void&gt;
+- async has(key: NodeStorageKey): Promise&lt;boolean&gt;
+
+- async includes(key: NodeStorageKey): Promise&lt;boolean&gt;
+
+- async size(): Promise&lt;number&gt;
+
+- async remove(key: NodeStorageKey): Promise&lt;DeleteFileResult&gt;
+
+- async data(): Promise&lt;Record&lt;NodeStorageKey, NodeStorageValue&gt;&gt;
+
+- async keys(): Promise&lt;NodeStorageKey[]&gt;
+
+- async values&lt;T = unknown&gt;(): Promise&lt;T[]&gt;
+
+- async healthCheck(): Promise&lt;boolean&gt;
 
 - async clear(): Promise&lt;void&gt;
 
-- async logStorage(): Promise&lt;void&gt;
+- async logStorage(): Promise&lt;number&gt;
+
+- async close(): Promise&lt;void&gt;
+
+`WriteFileResult` and `DeleteFileResult` are the `node-persist` types.
 
 # Acknowledgments
 

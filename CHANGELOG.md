@@ -25,6 +25,11 @@ If you like this project and find it useful, please consider giving it a star on
 
 ## [2.1.3] - Dev branch
 
+### Fixed
+
+- [jsdoc]: Fix the `@returns` of `keys()` and the description of `size()`.
+- [readme]: Fix the API reference: add the missing methods, remove the duplicated `logStorage()` and correct the return types.
+
 ### Changed
 
 - [package]: Bump `@vitest/coverage-v8` to v.5.1.1.

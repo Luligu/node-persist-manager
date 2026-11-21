@@ -210,7 +210,7 @@ export class NodeStorageManager {
   /**
    * Retrieves the keys of the entries in the storage.
    *
-   * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
+   * @returns {Promise<NodeStorageKey[]>} A promise that resolves with the keys of the entries in the storage.
    */
   async keys(): Promise<NodeStorageKey[]> {
     return this.storage.keys();
@@ -351,9 +351,9 @@ export class NodeStorage {
   }
 
   /**
-   * Checks if the storage includes a given key.
+   * Retrieves the number of keys in the storage.
    *
-   * @returns {Promise<boolean>} A promise that resolves with true if the key exists, otherwise false.
+   * @returns {Promise<number>} A promise that resolves with the number of keys in the storage.
    */
   async size(): Promise<number> {
     return this.storage.length();
@@ -386,7 +386,7 @@ export class NodeStorage {
   /**
    * Retrieves the keys of the entries in the storage.
    *
-   * @returns {Promise<number>} A promise that resolves with the keys of the entries in the storage.
+   * @returns {Promise<NodeStorageKey[]>} A promise that resolves with the keys of the entries in the storage.
    */
   async keys(): Promise<NodeStorageKey[]> {
     return this.storage.keys();
