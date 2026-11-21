@@ -157,7 +157,7 @@ Setting a key to `undefined` keeps the key without a value: `has()` returns true
 
 ### Migration from node-persist
 
-When a database is created, the files stored by `node-persist` (previous versions of this package) in the same directory are imported automatically. The `node-persist` files are left in place, so you can downgrade if needed, and they are not imported again.
+When a database is created, the files stored by `node-persist` (previous versions of this package) in the same directory are imported automatically. The import runs only once per database. The `node-persist` files are left in place but are no longer updated: after a downgrade, the previous version sees the data as it was at the migration, and the changes made while downgraded are not imported when you upgrade again.
 
 ### Options
 

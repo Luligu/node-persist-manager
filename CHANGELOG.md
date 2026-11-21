@@ -28,7 +28,7 @@ If you like this project and find it useful, please consider giving it a star on
 ### Added
 
 - [storage]: Each storage is a SQLite database `storage.sqlite` in its directory, using the WAL journal with synchronous `NORMAL`.
-- [storage]: Import the existing `node-persist` files when the database is created. The `node-persist` files are left in place.
+- [storage]: Import the existing `node-persist` files once, when the database is created. The `node-persist` files are left in place.
 - [storage]: Export the `InitOptions`, `WriteFileResult` and `DeleteFileResult` types, compatible with the `node-persist` ones.
 
 ### Changed
@@ -38,7 +38,6 @@ If you like this project and find it useful, please consider giving it a star on
 - [storage]: `close()` closes the database; the database is reopened if the storage is used again.
 - [storage]: `removeStorage()` closes the databases of the open `NodeStorage` instances before removing the directory; those instances then throw instead of recreating it.
 - [storage]: `NodeStorageManager.close()` also closes the databases of the `NodeStorage` instances it created.
-- [storage]: The `node-persist` files are imported once, tracked in a `metadata` table, in the same transaction that creates the database.
 - [storage]: The `writeQueue`, `writeQueueIntervalMs`, `writeQueueWriteOnlyLast` and `encoding` options are accepted and ignored.
 - [package]: Bump `@vitest/coverage-v8` to v.5.1.1.
 - [package]: Bump `oxfmt` to v.0.79.0.
