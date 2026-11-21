@@ -69,6 +69,11 @@ If you like this project and find it useful, please consider giving it a star on
 
 - [package]: Remove the `node-persist` dependency and the `@types/node-persist` dev dependency.
 
+### Fixed
+
+- [jsdoc]: Fix the `@returns` of `keys()` and the description of `size()`.
+- [readme]: Fix the API reference: add the missing methods, remove the duplicated `logStorage()` and correct the return types.
+
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
 ## [2.1.2] - 2026-11-13
